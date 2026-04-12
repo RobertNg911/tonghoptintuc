@@ -2,6 +2,8 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { healthRoute } from './routes/health';
+import { feedsRoute } from './routes/feeds';
+import { cronRoute } from './middleware/cron';
 import * as facebook from './services/facebook';
 
 const app = new Hono();
@@ -12,6 +14,8 @@ app.use('*', logger());
 
 // Routes
 app.route('/health', healthRoute);
+app.route('/feeds', feedsRoute);
+app.route('/cron', cronRoute);
 
 // Facebook routes
 app.post('/facebook/post', async (c) => {
