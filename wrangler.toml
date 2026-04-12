@@ -1,0 +1,8 @@
+name = "tonghoptintuc"
+main = "src/index.ts"
+compatibility_date = "2026-04-12"
+workers_dev = true
+
+[vars]
+NODE_ENV = "production"
+LOG_LEVEL = "info"

@@ -19,7 +19,7 @@
 {
   "contents": [{
     "parts": [{
-      "text": "Bạn là một biên tập viên tin tức chuyên nghiệp. Hãy viết lại tin tức sau thành bài đăng Facebook tiếng Việt hấp dẫn:\n\nTin gốc:\n- Tiêu đề: {title}\n- Nội dung: {summary}\n- Nguồn: {source}\n\nYêu cầu:\n1. Viết hook hấp dẫn 1-2 câu đầu\n2. Nội dung chính 150-200 chữ, giữ nguyên thông tin chính xác\n3. Thêm 2-3 hashtags phù hợp\n4. Format phù hợp đọc trên mobile\n\nViết ngay bài đăng, không giải thích thêm."
+      "text": "Bạn là một biên tập viên tin tức chuyên nghiệp. Hãy viết lại tin tức sau thành bài đăng Facebook tiếng Việt hấp dẫn:\n\nTin gốc:\n- Tiêu đề: {title}\n- Nội dung: {summary}\n\nYêu cầu:\n1. Viết hook hấp dẫn 1-2 câu đầu\n2. Nội dung chính 150-200 chữ, giữ nguyên thông tin chính xác\n3. Thêm 2-3 hashtags phù hợp\n4. Format phù hợp đọc trên mobile\n\nViết ngay bài đăng, không giải thích thêm."
     }]
   }]
 }

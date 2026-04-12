@@ -78,7 +78,9 @@ Phase 5 (AI Processing)
 3. Token renewal mechanism in place (renew before 60-day expiry)
 4. Posting time randomized within ±15 minute window to avoid spam detection
 
-**Plans**: TBD
+**Plans**: 1 plan(s)
+
+- [ ] 3-01-PLAN.md — Facebook Integration: page token, posting, token renewal, spam prevention
 
 ---
 
@@ -96,7 +98,9 @@ Phase 5 (AI Processing)
 3. Every run logged with success/failure status
 4. Alert triggers after 3 consecutive failures
 
-**Plans**: TBD
+**Plans**: 1 plan(s)
+
+- [ ] 04-01-PLAN.md — Cloudflare Cron Trigger + logging + Telegram alerting
 
 ---
 
@@ -114,7 +118,9 @@ Phase 5 (AI Processing)
 3. Hashtags added based on content topic
 4. Image generated if AI available, falls back to text-only if fails
 
-**Plans**: TBD
+**Plans**: 1 plan(s)
+
+- [ ] 05-ai-processing/05-01-PLAN.md — AI Processing: Gemini rewriting, Leonardo multi-account, fallback
 
 ---
 
@@ -124,9 +130,9 @@ Phase 5 (AI Processing)
 |-------|-------------|--------|-----------|
 | 1. Setup | 0/1 | Not started | - |
 | 2. Feed Collection | 0/1 | Not started | - |
-| 3. Facebook Integration | 0/1 | Not started | - |
+| 3. Facebook Integration | 0/1 | Planned | - |
 | 4. Scheduling + Monitoring | 0/1 | Not started | - |
-| 5. AI Processing | 0/1 | Not started | - |
+| 5. AI Processing | 0/1 | Planned | - |
 
 ---
 
