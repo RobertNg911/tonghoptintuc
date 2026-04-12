@@ -51,20 +51,20 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| FEED-01 | 2 | pending |
-| FEED-02 | 2 | pending |
-| FEED-03 | 2 | pending |
-| FEED-04 | 2 | pending |
-| AI-01 | 5 | pending |
-| AI-02 | 5 | pending |
-| AI-03 | 5 | pending |
-| IMG-01 | 6 | pending |
-| IMG-02 | 6 | pending |
-| FB-01 | 3 | pending |
-| FB-02 | 3 | pending |
-| FB-03 | 3 | pending |
-| FB-04 | 3 | pending |
-| SCHED-01 | 4 | pending |
-| SCHED-02 | 4 | pending |
-| LOG-01 | 7 | pending |
-| LOG-02 | 7 | pending |
+| FEED-01 | Phase 2 - Feed Collection | pending |
+| FEED-02 | Phase 2 - Feed Collection | pending |
+| FEED-03 | Phase 2 - Feed Collection | pending |
+| FEED-04 | Phase 2 - Feed Collection | pending |
+| AI-01 | Phase 5 - AI Processing | pending |
+| AI-02 | Phase 5 - AI Processing | pending |
+| AI-03 | Phase 5 - AI Processing | pending |
+| IMG-01 | Phase 5 - AI Processing | pending |
+| IMG-02 | Phase 5 - AI Processing | pending |
+| FB-01 | Phase 3 - Facebook Integration | pending |
+| FB-02 | Phase 3 - Facebook Integration | pending |
+| FB-03 | Phase 3 - Facebook Integration | pending |
+| FB-04 | Phase 3 - Facebook Integration | pending |
+| SCHED-01 | Phase 4 - Scheduling + Monitoring | pending |
+| SCHED-02 | Phase 4 - Scheduling + Monitoring | pending |
+| LOG-01 | Phase 4 - Scheduling + Monitoring | pending |
+| LOG-02 | Phase 4 - Scheduling + Monitoring | pending |
