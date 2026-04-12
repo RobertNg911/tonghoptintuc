@@ -40,7 +40,9 @@ Phase 5 (AI Processing)
 3. Environment variables load correctly for API keys
 4. Project structure ready for incremental development
 
-**Plans**: TBD
+**Plans**: 1 plan(s)
+
+- [ ] 01-setup-PLAN.md — Initialize Cloudflare Workers + Hono with health endpoint
 
 ---
 
