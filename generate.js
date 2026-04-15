@@ -1,7 +1,7 @@
 const fs = require('fs');
-const { OpenAI } = require('openai');
+const axios = require('axios');
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const GROQ_API_KEY = process.env.GROQ_API_KEY || 'gsk_xxxx';
 
 async function generate() {
   const items = JSON.parse(fs.readFileSync('news.json', 'utf8'));
@@ -19,21 +19,25 @@ async function generate() {
   const topic = Object.entries(topicWords).sort((a, b) => b[1] - a[1])[0]?.[0] || 'tin-tuc';
   const news = items.slice(0, 5).map(i => `- ${i.title}`).join('\n');
   
-  const prompt = `Viết bài Facebook viral tiếng Việt về "${topic}"
+  const prompt = `Write Facebook post in Vietnamese about "${topic}"
 
-Nguồn:
+News:
 ${news}
 
-Viết 200 từ, châm biếm, có câu hỏi, emoji, hashtag.`;
+Write 200 words, humorous, emojis, hashtag, ask question.`;
 
   try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 400
-    });
+    const response = await axios.post(
+      'https://api.groq.com/openai/v1/chat/completions',
+      {
+        model: 'llama-3.1-70b-versatile',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 400
+      },
+      { headers: { 'Authorization': `Bearer ${GROQ_API_KEY}` } }
+    );
     
-    const content = response.choices[0].message.content;
+    const content = response.data.choices[0].message.content;
     fs.writeFileSync('content.txt', content);
     console.log('Generated:', content.substring(0, 100));
   } catch (e) {

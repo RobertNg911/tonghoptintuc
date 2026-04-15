@@ -26,7 +26,7 @@ jobs:
           cache: 'npm'
       
       - name: Install dependencies
-        run: npm install xml2js axios openai
+        run: npm install axios xml2js
       
       - name: Determine category
         run: |
@@ -44,7 +44,7 @@ jobs:
       
       - name: Generate content
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: node generate.js
       
       - name: Post to Facebook
