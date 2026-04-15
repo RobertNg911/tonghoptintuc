@@ -11,7 +11,10 @@ const SOURCES = {
     { name: 'NYTimes', url: 'https://rss.nytimes.com/services/xml/rss/nyt/World.xml' },
     { name: 'Guardian World', url: 'https://www.theguardian.com/world/rss' },
     { name: 'France24', url: 'https://www.france24.com/en/rss' },
-    { name: 'Washington Post', url: 'https://feeds.washingtonpost.com/rss/world' }
+    { name: 'Washington Post', url: 'https://feeds.washingtonpost.com/rss/world' },
+    { name: 'CBS News', url: 'https://www.cbsnews.com/rss/paramount-603.xml' },
+    { name: 'Fox News', url: 'https://feeds.foxnews.com/foxnews/international' },
+    { name: 'Euronews', url: 'https://www.euronews.com/rss' }
   ],
   tech: [
     { name: 'TechCrunch', url: 'https://techcrunch.com/feed/' },
