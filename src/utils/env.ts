@@ -1,17 +1,27 @@
 interface Env {
   FACEBOOK_PAGE_ID: string;
-  FACEBOOK_ACCESS_TOKEN: string;
+  FB_TOKEN: string;
+  FACEBOOK_ACCESS_TOKEN?: string;
   GEMINI_API_KEY: string;
+  LEONARDO_API_KEYS?: string;
+  TELEGRAM_BOT_TOKEN?: string;
+  TELEGRAM_CHAT_ID?: string;
   LOG_LEVEL?: string;
   NODE_ENV?: string;
+  RUN_LOGS?: {
+    put(key: string, value: string): Promise<void>;
+    get(key: string, type: 'json'): Promise<any>;
+    list(prefix?: { prefix: string; limit?: number }): Promise<{ keys: Array<{ name: string }>; list_complete: boolean }>;
+  };
 }
 
 function getEnv(c: { env: Env }): Env {
-  const required = ['FACEBOOK_PAGE_ID', 'FACEBOOK_ACCESS_TOKEN', 'GEMINI_API_KEY'];
+  const required = ['FACEBOOK_PAGE_ID', 'FB_TOKEN'];
   const missing: string[] = [];
 
   for (const key of required) {
-    if (!c.env[key] || c.env[key].trim() === '') {
+    const val = c.env[key] || c.env[key.replace('FB_TOKEN', 'FACEBOOK_ACCESS_TOKEN')];
+    if (!val || val.trim() === '') {
       missing.push(key);
     }
   }
@@ -23,4 +33,11 @@ function getEnv(c: { env: Env }): Env {
   return c.env as Env;
 }
 
-export { getEnv, type Env };
+function getGeminiKeys(): string[] {
+  if (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) {
+    return process.env.GEMINI_API_KEY.split(',').map(k => k.trim()).filter(k => k);
+  }
+  return [];
+}
+
+export { getEnv, getGeminiKeys, type Env };

@@ -20,13 +20,70 @@ export interface FacebookPost {
 const API_VERSION = 'v25.0';
 
 function getEnvVars(c: { env: Env }): { pageId: string; accessToken: string } {
-  if (!c.env.FACEBOOK_PAGE_ID || !c.env.FACEBOOK_ACCESS_TOKEN) {
-    throw new Error('FACEBOOK_PAGE_ID and FACEBOOK_ACCESS_TOKEN are required');
+  const token = c.env.FB_TOKEN || c.env.FACEBOOK_ACCESS_TOKEN;
+  if (!c.env.FACEBOOK_PAGE_ID || !token) {
+    throw new Error('FACEBOOK_PAGE_ID and FB_TOKEN are required');
   }
   return {
     pageId: c.env.FACEBOOK_PAGE_ID,
-    accessToken: c.env.FACEBOOK_ACCESS_TOKEN,
+    accessToken: token,
   };
+}
+
+async function uploadPhotoFromBase64(
+  c: { env: Env },
+  imageBase64: string,
+  caption: string
+): Promise<PostResult> {
+  const { pageId, accessToken } = getEnvVars(c);
+  
+  try {
+    // Extract base64 data (remove data:image/png;base64, prefix)
+    const base64Data = imageBase64.split(',')[1];
+    
+    // Convert base64 to binary
+    const binaryString = atob(base64Data);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    
+    // Create FormData with the image
+    const formData = new FormData();
+    const blob = new Blob([bytes], { type: 'image/png' });
+    formData.append('source', blob, 'image.png');
+    formData.append('caption', caption);
+    
+    // Upload to Facebook
+    const url = `https://graph.facebook.com/${API_VERSION}/${pageId}/photos?access_token=${accessToken}`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      if (data.error?.code === 190) {
+        return { success: false, error: 'Token expired or invalid' };
+      }
+      if (data.error?.code === 4) {
+        return { success: false, error: 'Rate limit exceeded' };
+      }
+      return { success: false, error: data.error?.message || 'Upload error' };
+    }
+
+    return {
+      success: true,
+      postId: data.id,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
 }
 
 export async function postToPage(
@@ -37,24 +94,49 @@ export async function postToPage(
   const { pageId, accessToken } = getEnvVars(c);
   
   const baseUrl = `https://graph.facebook.com/${API_VERSION}/${pageId}`;
-  const params = new URLSearchParams({ access_token: accessToken });
 
   try {
-    let endpoint: string;
-    let body: Record<string, string>;
-
-    if (imageUrl) {
-      endpoint = `${baseUrl}/photos`;
-      body = { url: imageUrl, caption };
-    } else {
-      endpoint = `${baseUrl}/feed`;
-      body = { message: caption };
+    // Handle base64 images using FormData upload
+    if (imageUrl && imageUrl.startsWith('data:')) {
+      console.log('Uploading base64 image to Facebook...');
+      return await uploadPhotoFromBase64(c, imageUrl, caption);
     }
 
-    const response = await fetch(`${endpoint}?${params.toString()}`, {
+    // Handle URL images (existing method)
+    if (imageUrl) {
+      const url = `${baseUrl}/photos?access_token=${accessToken}`;
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: imageUrl, caption }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data.error?.code === 190) {
+          return { success: false, error: 'Token expired or invalid' };
+        }
+        if (data.error?.code === 4) {
+          return { success: false, error: 'Rate limit exceeded' };
+        }
+        return { success: false, error: data.error?.message || 'API error' };
+      }
+
+      return {
+        success: true,
+        postId: data.id || data.post_id,
+      };
+    }
+
+    // Text-only post
+    const url = `${baseUrl}/feed?access_token=${accessToken}`;
+    
+    const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ message: caption }),
     });
 
     const data = await response.json();
@@ -101,17 +183,21 @@ export async function getPageInfo(c: { env: Env }): Promise<PageInfo> {
 }
 
 export async function validateToken(c: { env: Env }): Promise<boolean> {
-  const { accessToken } = getEnvVars(c);
+  const { pageId, accessToken } = getEnvVars(c);
+  
+  console.log('Validating with pageId:', pageId, 'token length:', accessToken.length);
   
   const url = `https://graph.facebook.com/${API_VERSION}/me?access_token=${accessToken}`;
   
   const response = await fetch(url);
+  const data = await response.json();
   
-  if (!response.ok) {
+  console.log('Token validation response:', JSON.stringify(data).substring(0, 200));
+  
+  if (!response.ok || data.error) {
     return false;
   }
-
-  const data = await response.json();
+  
   return !!data.id;
 }
 

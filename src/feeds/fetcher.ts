@@ -1,27 +1,29 @@
-import feedExtractor from '@extractus/feed-extractor';
 import { type NewsItem, type FeedSource, type FeedFetchResult } from './types';
 
 const DEFAULT_SOURCES: FeedSource[] = [
+  // World News - 10 nguồn
   { name: 'BBC World', url: 'https://feeds.bbci.co.uk/news/world/rss.xml', category: 'world' },
-  { name: 'Reuters World', url: 'https://www.reutersagency.com/feed/?taxonomy=best-topics&post_type=best', category: 'world' },
-  { name: 'AP News', url: 'https://feeds.apnews.com/apnews/topnews', category: 'world' },
-  { name: 'CNN', url: 'http://edition.cnn.com/rss', category: 'world' },
-  { name: 'NPR', url: 'https://feeds.npr.org/1001/rss.xml', category: 'world' },
-  { name: 'The Guardian', url: 'https://www.theguardian.com/world/rss', category: 'world' },
-  { name: 'USA Today', url: 'https://rssfeeds.usatoday.com/UsatodaycomWorld-TopStories', category: 'world' },
-  { name: 'NBC News', url: 'https://worldnews.nbcnews.com/rss.xml', category: 'world' },
-  { name: 'ABC News', url: 'http://feeds.abcnews.com/International/', category: 'world' },
+  { name: 'CNN World', url: 'http://rss.cnn.com/rss/edition_world.rss', category: 'world' },
   { name: 'Al Jazeera', url: 'https://www.aljazeera.com/xml/rss/all.xml', category: 'world' },
-  { name: 'The Verge', url: 'https://www.theverge.com/rss/index.xml', category: 'tech' },
+  { name: 'Guardian World', url: 'https://www.theguardian.com/world/rss', category: 'world' },
+  { name: 'NYTimes World', url: 'https://rss.nytimes.com/services/xml/rss/nyt/World.xml', category: 'world' },
+  { name: 'France24', url: 'https://www.france24.com/en/rss', category: 'world' },
+  { name: 'Independent', url: 'https://www.independent.co.uk/news/world/rss', category: 'world' },
+  { name: 'BBC Asia', url: 'https://feeds.bbci.co.uk/news/world/asia/rss.xml', category: 'world' },
+  { name: 'VOA News', url: 'https://www.voanews.com/rss', category: 'world' },
+  { name: 'BBC Business', url: 'https://feeds.bbci.co.uk/news/business/rss.xml', category: 'world' },
+  
+  // Tech News - 10 nguồn
+  { name: 'BBC Tech', url: 'https://feeds.bbci.co.uk/news/technology/rss.xml', category: 'tech' },
   { name: 'TechCrunch', url: 'https://techcrunch.com/feed/', category: 'tech' },
+  { name: 'Wired', url: 'https://www.wired.com/feed/rss', category: 'tech' },
   { name: 'Ars Technica', url: 'https://feeds.arstechnica.com/arstechnica/index', category: 'tech' },
-  { name: 'WIRED', url: 'https://www.wired.com/feed/rss', category: 'tech' },
   { name: 'Engadget', url: 'https://www.engadget.com/rss.xml', category: 'tech' },
-  { name: 'MIT Technology Review', url: 'https://www.technologyreview.com/feed/', category: 'tech' },
-  { name: 'Hacker News', url: 'https://hnrss.org/newest', category: 'tech' },
-  { name: 'OpenAI Blog', url: 'https://openai.com/news/rss.xml', category: 'tech' },
-  { name: 'Google AI Blog', url: 'https://blog.google/technology/ai/rss/', category: 'tech' },
+  { name: 'CNET', url: 'https://www.cnet.com/rss/news/', category: 'tech' },
+  { name: 'The Next Web', url: 'https://thenextweb.com/feed/', category: 'tech' },
   { name: 'VentureBeat', url: 'https://venturebeat.com/feed/', category: 'tech' },
+  { name: 'The Verge', url: 'https://www.theverge.com/rss/index.xml', category: 'tech' },
+  { name: 'Digital Trends', url: 'https://www.digitaltrends.com/feed/', category: 'tech' },
 ];
 
 function generateId(title: string, link: string): string {
@@ -35,20 +37,63 @@ function generateId(title: string, link: string): string {
   return Math.abs(hash).toString(36);
 }
 
+function parseRSS(xml: string): NewsItem[] {
+  const items: NewsItem[] = [];
+  
+  const itemRegex = /<item>([\s\S]*?)<\/item>/gi;
+  let match;
+  
+  while ((match = itemRegex.exec(xml)) !== null) {
+    const itemXml = match[1];
+    
+    const titleMatch = /<title><!\[CDATA\[(.*?)\]\]><\/title>|<title>(.*?)<\/title>/i.exec(itemXml);
+    const linkMatch = /<link>(.*?)<\/link>/i.exec(itemXml);
+    const descMatch = /<description><!\[CDATA\[(.*?)\]\]><\/description>|<description>(.*?)<\/description>/i.exec(itemXml);
+    const pubDateMatch = /<pubDate>(.*?)<\/pubDate>/i.exec(itemXml);
+    
+    const title = titleMatch ? (titleMatch[1] || titleMatch[2] || '').trim() : '';
+    const link = linkMatch ? linkMatch[1].trim() : '';
+    const summary = descMatch ? (descMatch[1] || descMatch[2] || '').substring(0, 300).trim() : '';
+    let pubDate = new Date();
+    if (pubDateMatch) {
+      pubDate = new Date(pubDateMatch[1]);
+    }
+    
+    if (title && link) {
+      items.push({
+        id: generateId(title, link),
+        title,
+        link,
+        summary,
+        pubDate,
+        source: '',
+        sourceCategory: 'world',
+      });
+    }
+  }
+  
+  return items;
+}
+
 export async function fetchFeed(source: FeedSource): Promise<FeedFetchResult> {
   try {
-    const feed = await feedExtractor.loadFeed(source.url);
+    const response = await fetch(source.url, {
+      headers: {
+        'User-Agent': 'TongHopTinTuc/1.0',
+      },
+    });
     
-    const items: NewsItem[] = (feed.items || []).map(item => ({
-      id: generateId(item.title || '', item.link || ''),
-      title: item.title || '',
-      link: item.link || '',
-      summary: item.description?.substring(0, 300) || '',
-      pubDate: new Date(item.pubDate || Date.now()),
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    
+    const xml = await response.text();
+    const items = parseRSS(xml).map(item => ({
+      ...item,
       source: source.name,
       sourceCategory: source.category,
     }));
-
+    
     return { source: source.name, items, fetchedAt: new Date() };
   } catch (error) {
     return {

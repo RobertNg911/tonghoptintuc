@@ -7,9 +7,10 @@ interface Env {
 
 const API_URL = 'https://api.telegram.org/bot';
 
-async function sendTelegramAlert(message: string, env: Env): Promise<boolean> {
+export async function sendTelegramAlert(message: string, env: Env): Promise<boolean> {
   if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) {
     log('warn', 'Telegram not configured - skipping alert');
+    console.log('[ALERT] Telegram not configured, would send:', message.substring(0, 100));
     return false;
   }
 
@@ -22,6 +23,8 @@ async function sendTelegramAlert(message: string, env: Env): Promise<boolean> {
   };
 
   try {
+    log('info', 'Sending Telegram alert', { message: message.substring(0, 100) });
+    
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -34,7 +37,7 @@ async function sendTelegramAlert(message: string, env: Env): Promise<boolean> {
       return false;
     }
 
-    log('info', 'Telegram alert sent successfully', { message: message.substring(0, 50) });
+    log('info', 'Telegram alert sent successfully');
     return true;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -43,7 +46,7 @@ async function sendTelegramAlert(message: string, env: Env): Promise<boolean> {
   }
 }
 
-async function checkAndAlert(failureCount: number, lastError: string, env: Env): Promise<void> {
+export async function checkAndAlert(failureCount: number, lastError: string, env: Env): Promise<void> {
   const message = `🚨 *TongHopTinTuc Alert*\n\n` +
     `*Error:* ${lastError}\n` +
     `*Time:* ${new Date().toISOString()}\n` +
@@ -53,4 +56,7 @@ async function checkAndAlert(failureCount: number, lastError: string, env: Env):
   await sendTelegramAlert(message, env);
 }
 
-export { sendTelegramAlert, checkAndAlert };
+export async function alertError(message: string, env: Env): Promise<void> {
+  const fullMessage = `🚨 *TongHopTinTuc LỖI*\n\n${message}\n\n*Time:* ${new Date().toISOString()}`;
+  await sendTelegramAlert(fullMessage, env);
+}

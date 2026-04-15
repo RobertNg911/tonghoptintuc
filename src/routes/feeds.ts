@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { fetchAllFeeds } from '../feeds/fetcher';
+import { fetchAllFeeds, DEFAULT_SOURCES } from '../feeds/fetcher';
 import { normalizeFeeds } from '../feeds/normalizer';
 import type { NewsItem } from '../feeds/types';
 
@@ -15,11 +15,29 @@ feedsRoute.get('/', async (c) => {
     
     const normalized = normalizeFeeds(allItems);
     
+    const sourceStats = rawResults.map(r => ({
+      name: r.source,
+      count: r.items?.length || 0,
+      success: !r.error,
+      error: r.error || null,
+      category: DEFAULT_SOURCES.find(s => s.name === r.source)?.category || 'unknown'
+    }));
+    
+    const successCount = sourceStats.filter(s => s.success && s.count > 0).length;
+    const failCount = sourceStats.filter(s => s.error).length;
+    
     return c.json({
       success: true,
       count: normalized.length,
       items: normalized,
       fetchedAt: new Date().toISOString(),
+      sources: sourceStats,
+      stats: {
+        total: sourceStats.length,
+        success: successCount,
+        failed: failCount,
+        totalItems: allItems.length
+      }
     });
   } catch (error) {
     return c.json({

@@ -2,31 +2,50 @@ import { Hono } from 'hono';
 import { runPipeline } from '../services/scheduler';
 import { log } from '../services/logger';
 
-interface Env {
-  TELEGRAM_BOT_TOKEN?: string;
-  TELEGRAM_CHAT_ID?: string;
-}
-
 const cronRoute = new Hono();
 
-cronRoute.post('/cron', async (c) => {
+cronRoute.post('/', async (c) => {
+  return c.json({ message: 'Use POST to run cron' });
+});
+
+cronRoute.all('/', async (c) => {
   const startTime = Date.now();
-  const env = c.env as Env;
+  const minute = new Date().getMinutes();
   
-  const delayMs = Math.floor(Math.random() * 15 * 60 * 1000);
-  await new Promise(resolve => setTimeout(resolve, delayMs));
+  const category = minute >= 30 ? 'tech' : 'world';
   
-  const result = await runPipeline({ env });
+  log('info', `Cron job started`, { minute, category });
+  
+  const result = await runPipeline(c, category);
   const duration = Date.now() - startTime;
   
-  log('info', 'Cron job completed', { success: result.success, durationMs: duration });
+  log('info', 'Cron job completed', { success: result.success, durationMs: duration, category });
   
   return c.json({
     success: result.success,
     message: result.message,
+    category,
     durationMs: duration,
     timestamp: new Date().toISOString()
   });
+});
+
+const stepEvents: Map<string, string[]> = new Map();
+
+export function emitStep(runId: string, step: string, status: 'start' | 'done' | 'error', message?: string): void {
+  const steps = stepEvents.get(runId) || [];
+  steps.push(JSON.stringify({ step, status, message, time: Date.now() }));
+  stepEvents.set(runId, steps);
+  
+  if (steps.length > 100) {
+    stepEvents.delete(runId);
+  }
+}
+
+cronRoute.get('/progress/:runId', async (c) => {
+  const runId = c.req.param('runId');
+  const steps = stepEvents.get(runId) || [];
+  return c.json({ steps, total: steps.length });
 });
 
 export { cronRoute };

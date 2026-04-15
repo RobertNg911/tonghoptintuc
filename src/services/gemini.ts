@@ -1,6 +1,8 @@
 import type { GeminiResponse } from '../types/post';
 import type { Env } from '../utils/env';
 
+const API_VERSION = 'v1';
+
 export async function rewriteContent(
   c: { env: Env },
   title: string,
@@ -28,30 +30,62 @@ Yêu cầu:
 
 Viết ngay bài đăng, không giải thích thêm.`;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  // Try different models - will fallback to text-only post if all fail
+  const models = [
+    'gemini-2.0-flash',
+    'gemini-1.5-flash',
+    'gemini-pro',
+  ];
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 500,
-      },
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Gemini API error: ${error}`);
-  }
-
-  const data: GeminiResponse = await response.json();
+  let lastError = '';
   
-  if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
-    throw new Error('Invalid Gemini response');
-  }
+  for (const model of models) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/${API_VERSION}/models/${model}:generateContent?key=${apiKey}`;
+  
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 500,
+          },
+        }),
+      });
 
-  return data.candidates[0].content.parts[0].text;
+      if (!response.ok) {
+        lastError = await response.text();
+        if (response.status === 429 || response.status === 403) {
+          continue; // Try next model
+        }
+        throw new Error(`Gemini API error: ${lastError}`);
+      }
+
+      const data: GeminiResponse = await response.json();
+      
+      if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+        throw new Error('Invalid Gemini response');
+      }
+
+      return data.candidates[0].content.parts[0].text;
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : String(err);
+      if (lastError.includes('429') || lastError.includes('quota')) {
+        continue; // Try next model
+      }
+      throw err;
+    }
+  }
+  
+  throw new Error(`All Gemini models failed: ${lastError}`);
+}
+
+export async function generateImage(
+  c: { env: Env },
+  prompt: string
+): Promise<string | null> {
+  // Skip image generation for now - can be added later with paid API
+  return null;
 }
