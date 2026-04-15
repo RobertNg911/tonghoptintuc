@@ -30,7 +30,8 @@ const SOURCES = {
 function fetchFeed(url, name) {
   return new Promise((resolve) => {
     const start = Date.now();
-    https.get(url, res => {
+    const client = url.startsWith('https') ? require('https') : require('http');
+    client.get(url, res => {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {

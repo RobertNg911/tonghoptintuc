@@ -1,3 +1,4 @@
+const http = require('http');
 const https = require('https');
 const fs = require('fs');
 const { parseString } = require('xml2js');
@@ -6,12 +7,22 @@ const SOURCES = {
   world: [
     { name: 'BBC World', url: 'https://feeds.bbci.co.uk/news/world/rss.xml' },
     { name: 'CNN World', url: 'http://rss.cnn.com/rss/edition_world.rss' },
-    { name: 'Al Jazeera', url: 'https://www.aljazeera.com/xml/rss/all.xml' }
+    { name: 'Al Jazeera', url: 'https://www.aljazeera.com/xml/rss/all.xml' },
+    { name: 'NYTimes', url: 'https://rss.nytimes.com/services/xml/rss/nyt/World.xml' },
+    { name: 'Guardian World', url: 'https://www.theguardian.com/world/rss' },
+    { name: 'France24', url: 'https://www.france24.com/en/rss' },
+    { name: 'Washington Post', url: 'https://feeds.washingtonpost.com/rss/world' }
   ],
   tech: [
     { name: 'TechCrunch', url: 'https://techcrunch.com/feed/' },
     { name: 'The Verge', url: 'https://www.theverge.com/rss/index.xml' },
-    { name: 'Wired', url: 'https://www.wired.com/feed/rss' }
+    { name: 'Wired', url: 'https://www.wired.com/feed/rss' },
+    { name: 'Ars Technica', url: 'https://feeds.arstechnica.com/arstechnica/index' },
+    { name: 'Engadget', url: 'https://www.engadget.com/rss.xml' },
+    { name: 'CNET', url: 'https://www.cnet.com/rss/news/' },
+    { name: 'The Next Web', url: 'https://thenextweb.com/feed/' },
+    { name: 'ZDNet', url: 'https://www.zdnet.com/news/rss.xml' },
+    { name: 'Digital Trends', url: 'https://www.digitaltrends.com/feed/' }
   ]
 };
 
@@ -19,7 +30,8 @@ const CATEGORY = process.env.CATEGORY || 'world';
 
 function fetchFeed(url) {
   return new Promise((resolve, reject) => {
-    https.get(url, res => {
+    const client = url.startsWith('https') ? https : http;
+    client.get(url, res => {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => resolve(data));
