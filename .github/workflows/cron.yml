@@ -1,45 +1,54 @@
-name: TongHopTinTuc Cron
+name: TongHopTinTuc Pipeline
 
 on:
   schedule:
-    # World: Phút 0 mỗi giờ UTC = 7h sáng VN
     - cron: '0 * * * *'
-    # Tech: Phút 30 mỗi giờ UTC = 7h30 sáng VN
     - cron: '30 * * * *'
-  # Chạy thủ công
   workflow_dispatch:
     inputs:
       category:
-        description: 'Loại tin tức'
-        required: true
-        default: 'world'
         type: choice
         options:
           - world
           - tech
 
 jobs:
-  run-pipeline:
+  run:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     
     steps:
-      - name: Gọi Worker API
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm install xml2js axios openai
+      
+      - name: Determine category
         run: |
           if [ "${{ github.event.schedule }}" = "30 * * * *" ]; then
-            CATEGORY="tech"
+            echo "CATEGORY=tech" >> $GITHUB_ENV
           else
-            CATEGORY="world"
+            echo "CATEGORY=world" >> $GITHUB_ENV
           fi
-          
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            CATEGORY="${{ github.event.inputs.category }}"
+            echo "CATEGORY=${{ github.event.inputs.category }}" >> $GITHUB_ENV
           fi
-          
-          echo "Running $CATEGORY news..."
-          curl -X POST "https://tonghoptintuc.leesun190590.workers.dev/run" \
-            -H "Content-Type: application/json" \
-            -d "{\"category\":\"$CATEGORY\"}" \
-            -w "\nHTTP Status: %{http_code}\n"
-          
-          echo "Done at $(date)"
+      
+      - name: Fetch feeds
+        run: node fetch-news.js
+      
+      - name: Generate content
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: node generate.js
+      
+      - name: Post to Facebook
+        env:
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_TOKEN: ${{ secrets.FB_TOKEN }}
+        run: node post.js

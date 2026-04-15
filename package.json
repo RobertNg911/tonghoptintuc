@@ -1,18 +1,12 @@
 {
   "name": "tonghoptintuc",
   "version": "1.0.0",
-  "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "build": "wrangler deploy"
+    "start": "node server.js"
   },
   "dependencies": {
-    "hono": "^4.0.0"
-  },
-  "devDependencies": {
-    "@cloudflare/workers-types": "^4.20241127.0",
-    "typescript": "^5.7.2",
-    "wrangler": "^3.97.0"
+    "axios": "^1.6.0",
+    "openai": "^4.0.0",
+    "xml2js": "^0.6.0"
   }
 }
