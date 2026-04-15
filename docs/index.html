@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TongHopTinTuc - Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      color: #333;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      color: #fff;
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 32px;
+    }
+    .subtitle {
+      color: #aaa;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .status {
+      background: #28a745;
+      color: white;
+      padding: 15px;
+      border-radius: 10px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .status-dot {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #fff;
+      margin-right: 8px;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .btn {
+      flex: 1;
+      padding: 15px;
+      font-size: 16px;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      min-width: 200px;
+      transition: all 0.3s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #e94560 0%, #ff6b6b 100%);
+      color: white;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(233, 69, 96, 0.4);
+    }
+    .btn-secondary {
+      background: #4a4a6a;
+      color: white;
+    }
+    .result {
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .result.show { display: block; }
+    .result.success { border-left: 4px solid #28a745; }
+    .result.error { border-left: 4px solid #dc3545; }
+    .result h3 { margin-bottom: 10px; }
+    .result p { line-height: 1.6; }
+    .history {
+      background: #f8f9fa;
+      border-radius: 15px;
+      padding: 20px;
+      margin-top: 30px;
+    }
+    .history h3 {
+      margin-bottom: 15px;
+      color: #333;
+    }
+    .history-item {
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 10px;
+    }
+    .history-item.success { border-left: 4px solid #28a745; }
+    .history-item.error { border-left: 4px solid #dc3545; }
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+    .history-status.success { color: #28a745; font-weight: bold; }
+    .history-status.error { color: #dc3545; font-weight: bold; }
+    .history-time { font-size: 12px; color: #666; }
+    .history-message { font-size: 14px; margin: 5px 0; }
+    .step-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      margin-right: 5px;
+      background: #e9ecef;
+    }
+    .step-badge.done { background: #d4edda; color: #155724; }
+    .step-badge.error { background: #f8d7da; color: #721c24; }
+    .loading {
+      text-align: center;
+      color: #666;
+      animation: dots 1.5s infinite;
+    }
+    @keyframes dots {
+      0%, 20% { content: '.'; }
+      40% { content: '..'; }
+      60%, 100% { content: '...'; }
+    }
+    .info {
+      text-align: center;
+      color: #888;
+      font-size: 13px;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔥 TongHopTinTuc</h1>
+    <p class="subtitle">Bot tổng hợp tin tức tự động</p>
+    
+    <div class="status">
+      <span class="status-dot"></span>
+      Hệ thống hoạt động - GitHub Actions Cron
+    </div>
+    
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="runPipeline('world')">
+        🌍 Chạy Tin Thế Giới
+      </button>
+      <button class="btn btn-primary" onclick="runPipeline('tech')">
+        💻 Chạy Tin Công Nghệ
+      </button>
+    </div>
+    
+    <div class="btn-group">
+      <button class="btn btn-secondary" onclick="loadHistory()">
+        📜 Xem Lịch Sử
+      </button>
+    </div>
+    
+    <div id="result" class="result"></div>
+    
+    <div class="history">
+      <h3>📜 Lịch Sử Chạy</h3>
+      <div id="historyList">
+        <p class="loading">Đang tải...</p>
+      </div>
+    </div>
+    
+    <div class="info">
+      Cron chạy tự động mỗi giờ (UTC)<br>
+      0 * * * * → Tin thế giới | 30 * * * * → Tin công nghệ
+    </div>
+  </div>
+  
+  <script>
+    const API_URL = 'https://tonghoptintuc.leesun190590.workers.dev';
+    
+    async function runPipeline(category) {
+      const result = document.getElementById('result');
+      result.className = 'result show';
+      result.innerHTML = '<p class="loading">Đang chạy...</p>';
+      
+      try {
+        const response = await fetch(API_URL + '/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ category })
+        });
+        const data = await response.json();
+        
+        let stepsHtml = '';
+        if (data.steps) {
+          for (const s of data.steps) {
+            const badgeClass = s.status === 'done' ? 'done' : 'error';
+            stepsHtml += '<span class="step-badge ' + badgeClass + '">' + s.step + '</span>';
+          }
+        }
+        
+        result.className = 'result show ' + (data.success ? 'success' : 'error');
+        result.innerHTML = 
+          '<h3>' + (data.success ? '✅ Thành công!' : '❌ Thất bại') + '</h3>' +
+          '<p><strong>Thông điệp:</strong> ' + (data.message || 'Không có') + '</p>' +
+          '<p><strong>Thời gian:</strong> ' + data.durationMs + 'ms</p>' +
+          '<p><strong>Steps:</strong> ' + stepsHtml + '</p>';
+        
+        setTimeout(() => loadHistory(), 2000);
+      } catch (e) {
+        result.className = 'result show error';
+        result.innerHTML = '<h3>❌ Lỗi kết nối</h3><p>' + e.message + '</p>';
+      }
+    }
+    
+    async function loadHistory() {
+      const list = document.getElementById('historyList');
+      list.innerHTML = '<p class="loading">Đang tải...</p>';
+      
+      try {
+        const response = await fetch(API_URL + '/history?limit=10');
+        const data = await response.json();
+        
+        if (!data.history || data.history.length === 0) {
+          list.innerHTML = '<p>Chưa có lịch sử</p>';
+          return;
+        }
+        
+        let html = '';
+        for (const run of data.history) {
+          const date = new Date(run.timestamp);
+          const timeStr = date.toLocaleString('vi-VN');
+          const statusClass = run.success ? 'success' : 'error';
+          const statusText = run.success ? '✅ Thành công' : '❌ Thất bại';
+          
+          let stepsHtml = '';
+          if (run.steps) {
+            for (const s of run.steps) {
+              const badgeClass = s.status === 'done' ? 'done' : 'error';
+              stepsHtml += '<span class="step-badge ' + badgeClass + '">' + s.step + '</span>';
+            }
+          }
+          
+          html += '<div class="history-item ' + statusClass + '">' +
+            '<div class="history-header">' +
+              '<span class="history-status ' + statusClass + '">' + statusText + '</span>' +
+              '<span class="history-time">' + timeStr + '</span>' +
+            '</div>' +
+            '<div class="history-message">' + (run.message || 'Không có thông điệp') + '</div>' +
+            '<div>' + stepsHtml + '</div>' +
+          '</div>';
+        }
+        
+        list.innerHTML = html;
+      } catch (e) {
+        list.innerHTML = '<p>❌ Lỗi: ' + e.message + '</p>';
+      }
+    }
+    
+    loadHistory();
+  </script>
+</body>
+</html>

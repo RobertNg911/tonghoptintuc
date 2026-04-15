@@ -2,12 +2,21 @@ name: TongHopTinTuc Cron
 
 on:
   schedule:
-    # World news: Phút 0 mỗi giờ (UTC) = 7h sáng Việt Nam
+    # World: Phút 0 mỗi giờ UTC = 7h sáng VN
     - cron: '0 * * * *'
-    # Tech news: Phút 30 mỗi giờ (UTC) = 7h30 sáng Việt Nam  
+    # Tech: Phút 30 mỗi giờ UTC = 7h30 sáng VN
     - cron: '30 * * * *'
-  # Cho phép chạy thủ công
+  # Chạy thủ công
   workflow_dispatch:
+    inputs:
+      category:
+        description: 'Loại tin tức'
+        required: true
+        default: 'world'
+        type: choice
+        options:
+          - world
+          - tech
 
 jobs:
   run-pipeline:
@@ -15,29 +24,22 @@ jobs:
     timeout-minutes: 10
     
     steps:
-      - name: Gọi API World News (phút 0)
-        if: github.event.schedule != '30 * * * *'
+      - name: Gọi Worker API
         run: |
-          echo "Running World News pipeline..."
+          if [ "${{ github.event.schedule }}" = "30 * * * *" ]; then
+            CATEGORY="tech"
+          else
+            CATEGORY="world"
+          fi
+          
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            CATEGORY="${{ github.event.inputs.category }}"
+          fi
+          
+          echo "Running $CATEGORY news..."
           curl -X POST "https://tonghoptintuc.leesun190590.workers.dev/run" \
             -H "Content-Type: application/json" \
-            -d '{"category":"world"}' \
-            || echo "World API failed"
-        env:
-          WORKER_URL: https://tonghoptintuc.leesun190590.workers.dev
-
-      - name: Gọi API Tech News (phút 30)
-        if: github.event.schedule == '30 * * * *'
-        run: |
-          echo "Running Tech News pipeline..."
-          curl -X POST "https://tonghoptintuc.leesun190590.workers.dev/run" \
-            -H "Content-Type: application/json" \
-            -d '{"category":"tech"}' \
-            || echo "Tech API failed"
-        env:
-          WORKER_URL: https://tonghoptintuc.leesun190590.workers.dev
-
-      - name: Kiểm tra kết quả
-        run: |
-          echo "Cron job completed"
-          echo "Time: ${{ github.event.schedule }}"
+            -d "{\"category\":\"$CATEGORY\"}" \
+            -w "\nHTTP Status: %{http_code}\n"
+          
+          echo "Done at $(date)"
