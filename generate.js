@@ -30,12 +30,21 @@ async function generate() {
   const topic = Object.entries(topicWords).sort((a, b) => b[1] - a[1])[0]?.[0] || 'tin-tuc';
   const news = items.slice(0, 5).map(i => `- ${i.title}`).join('\n');
   
-  const prompt = `Write Facebook post in Vietnamese about "${topic}"
+  const prompt = `Bạn là chuyên gia viết content Facebook viral tiếng Việt.
 
-News:
+VIẾT BÀI FACEBOOK về chủ đề: ${topic}
+
+Nguồn tin từ ${items[0]?.source || 'các nguồn'}:
 ${news}
 
-Write 200 words, humorous, emojis, hashtags, ask question.`;
+YÊU CẦU:
+- 100% tiếng Việt có dấu
+- Phong cách châm biếm, hài hước (kiểu Đen Vũ)
+- Có câu hỏi để người ta bình luận
+- Thêm emoji vào các câu quan trọng  
+- 200-300 từ
+- 3-5 hashtag tiếng Việt ở cuối
+- Không copy nguyên văn từ nguồn`;
 
   try {
     const response = await axios.post(
