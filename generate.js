@@ -44,6 +44,7 @@ Yêu cầu về văn phong:
 - Kết bài: Một câu chốt hạ "xanh chín" hoặc một câu hỏi tương tác khiến người ta phải comment vì ức chế hoặc vì quá đúng
 - Định dạng: Sử dụng các icon phù hợp nhưng không lạm dụng. Xuống dòng hợp lý để dễ đọc trên điện thoại
 - Tone giọng: Châm biếm, hài hước, hơi "xéo sắc" một chút nhưng không vi phạm tiêu chuẩn cộng đồng
+- Ngôn ngữ BẮT BUỘC: 100% tiếng Việt có dấu, không được lẫn tiếng Anh
 - Độ dài: 200-300 từ
 - Hashtag: 3-5 hashtag tiếng Việt ở cuối`;
 
