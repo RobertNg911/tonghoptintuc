@@ -15,21 +15,24 @@ const SOURCES = {
   ]
 };
 
+const CATEGORY = process.env.CATEGORY || 'world';
+
 function fetchFeed(url) {
   return new Promise((resolve, reject) => {
     https.get(url, res => {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => resolve(data));
+      res.on('error', reject);
     }).on('error', reject);
   });
 }
 
 async function fetchAll() {
-  const category = process.env.CATEGORY || 'world';
-  const sources = SOURCES[category] || SOURCES.world;
+  const sources = SOURCES[CATEGORY] || SOURCES.world;
   const items = [];
-
+  let successCount = 0;
+  
   for (const source of sources) {
     try {
       console.log(`Fetching ${source.name}...`);
@@ -39,23 +42,34 @@ async function fetchAll() {
       );
       const channel = feed.rss?.channel?.[0];
       const entries = channel?.item || [];
-
+      
       for (const item of entries.slice(0, 5)) {
         items.push({
           title: item.title?.[0] || '',
           link: item.link?.[0] || '',
           pubDate: item.pubDate?.[0] || '',
           source: source.name,
-          category
+          category: CATEGORY
         });
       }
+      successCount++;
+      console.log(`✅ ${source.name}: ${entries.length} items`);
     } catch (e) {
-      console.error(`Error fetching ${source.name}: ${e.message}`);
+      console.error(`❌ ${source.name} failed: ${e.message}`);
     }
   }
 
+  if (items.length === 0) {
+    console.error(`❌ No items fetched for ${CATEGORY}`);
+    process.exit(1);
+  }
+
   fs.writeFileSync('news.json', JSON.stringify(items, null, 2));
-  console.log(`Fetched ${items.length} items for ${category}`);
+  console.log(`✅ Total ${items.length} items for ${CATEGORY}`);
+  process.exit(0);
 }
 
-fetchAll().catch(console.error);
+fetchAll().catch(e => {
+  console.error('❌ Fatal:', e.message);
+  process.exit(1);
+});

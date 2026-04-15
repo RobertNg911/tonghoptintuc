@@ -1,10 +1,21 @@
 const fs = require('fs');
 const axios = require('axios');
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY || 'gsk_xxxx';
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 async function generate() {
-  const items = JSON.parse(fs.readFileSync('news.json', 'utf8'));
+  let items = [];
+  try {
+    items = JSON.parse(fs.readFileSync('news.json', 'utf8'));
+  } catch (e) {
+    console.error('❌ No news.json file');
+    process.exit(1);
+  }
+  
+  if (items.length === 0) {
+    console.error('❌ No news items fetched');
+    process.exit(1);
+  }
   
   const topicWords = {};
   for (const item of items) {
@@ -24,7 +35,7 @@ async function generate() {
 News:
 ${news}
 
-Write 200 words, humorous, emojis, hashtag, ask question.`;
+Write 200 words, humorous, emojis, hashtags, ask question.`;
 
   try {
     const response = await axios.post(
@@ -37,19 +48,28 @@ Write 200 words, humorous, emojis, hashtag, ask question.`;
       { headers: { 'Authorization': `Bearer ${GROQ_API_KEY}` } }
     );
     
+    if (!response.data.choices || !response.data.choices[0]) {
+      console.error('❌ AI response empty');
+      process.exit(1);
+    }
+    
     const content = response.data.choices[0].message.content;
     fs.writeFileSync('content.txt', content);
-    console.log('Generated:', content.substring(0, 100));
+    console.log('✅ AI generated content');
+    console.log('Content:', content.substring(0, 100));
+    
   } catch (e) {
-    const fallback = `🔥 ${topic.toUpperCase()}: Tin nóng!
-
-Theo các nguồn, có diễn biến mới về ${topic}.
-
-Bạn nghĩ sao? Comment nhé! 💬
-#${topic.replace(/ /g, '')} #TinNong #TongHop`;
-    fs.writeFileSync('content.txt', fallback);
-    console.log('Fallback used');
+    console.error('❌ AI Error:', e.message);
+    if (e.response?.data) {
+      console.error('Response:', JSON.stringify(e.response.data));
+    }
+    fs.writeFileSync('content.txt', `❌ AI FAILED: ${e.message}`);
+    process.exit(1);
   }
 }
 
-generate();
+generate().catch(e => {
+  console.error('❌ Fatal Error:', e.message);
+  fs.writeFileSync('content.txt', `❌ FATAL: ${e.message}`);
+  process.exit(1);
+});
