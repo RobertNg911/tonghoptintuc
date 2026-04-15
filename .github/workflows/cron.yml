@@ -32,6 +32,7 @@ jobs:
         run: npm install axios xml2js
       
       - name: Determine category
+        id: category
         run: |
           if [ "${{ github.event.schedule }}" = "30 * * * *" ]; then
             echo "CATEGORY=tech" >> $GITHUB_ENV
@@ -55,3 +56,30 @@ jobs:
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           FB_TOKEN: ${{ secrets.FB_TOKEN }}
         run: node post.js
+      
+      - name: Report success to Telegram
+        if: success()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ]; then
+            CONTENT=$(cat content.txt | head -c 200)
+            curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+              -d "chat_id=$TELEGRAM_CHAT_ID" \
+              -d "text=✅ *TongHopTinTuc* - $CATEGORY posted! %0A$CONTENT..." \
+              -d "parse_mode=Markdown"
+          fi
+      
+      - name: Report failure to Telegram
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ]; then
+            curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+              -d "chat_id=$TELEGRAM_CHAT_ID" \
+              -d "text=❌ *TongHopTinTuc LỖI*%0ACategory: $CATEGORY%0ACheck logs!" \
+              -d "parse_mode=Markdown"
+          fi
