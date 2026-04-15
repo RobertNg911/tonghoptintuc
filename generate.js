@@ -30,21 +30,22 @@ async function generate() {
   const topic = Object.entries(topicWords).sort((a, b) => b[1] - a[1])[0]?.[0] || 'tin-tuc';
   const news = items.slice(0, 5).map(i => `- ${i.title}`).join('\n');
   
-  const prompt = `Bạn là chuyên gia viết content Facebook viral tiếng Việt.
+  const prompt = `Vai trò: Bạn là một Content Creator chuyên viết "content bẩn" (hài hước), có khiếu châm biếm sâu cay và cực kỳ am hiểu tâm lý cư dân mạng Việt Nam.
 
-VIẾT BÀI FACEBOOK về chủ đề: ${topic}
+Nhiệm vụ: Viết một bài đăng Facebook về chủ đề: ${topic}
 
-Nguồn tin từ ${items[0]?.source || 'các nguồn'}:
+Nguồn:
 ${news}
 
-YÊU CẦU:
-- 100% tiếng Việt có dấu
-- Phong cách châm biếm, hài hước (kiểu Đen Vũ)
-- Có câu hỏi để người ta bình luận
-- Thêm emoji vào các câu quan trọng  
-- 200-300 từ
-- 3-5 hashtag tiếng Việt ở cuối
-- Không copy nguyên văn từ nguồn`;
+Yêu cầu về văn phong:
+- Ngôn ngữ: Sử dụng tiếng lóng của Gen Z, các câu nói viral, hoặc cách so sánh ví von "ngược đời"
+- Hook (Mở bài): Phải cực mạnh, gây tò mò hoặc đánh ngay vào nỗi đau/sự thật phũ phàng bằng giọng điệu mỉa mai
+- Thân bài: Triển khai nội dung bằng cách "bóc trần" sự thật, dùng phép nói quá hoặc châm biếm. Tránh viết kiểu quảng cáo sáo rỗng
+- Kết bài: Một câu chốt hạ "xanh chín" hoặc một câu hỏi tương tác khiến người ta phải comment vì ức chế hoặc vì quá đúng
+- Định dạng: Sử dụng các icon phù hợp nhưng không lạm dụng. Xuống dòng hợp lý để dễ đọc trên điện thoại
+- Tone giọng: Châm biếm, hài hước, hơi "xéo sắc" một chút nhưng không vi phạm tiêu chuẩn cộng đồng
+- Độ dài: 200-300 từ
+- Hashtag: 3-5 hashtag tiếng Việt ở cuối`;
 
   try {
     const response = await axios.post(
