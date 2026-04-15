@@ -1,0 +1,43 @@
+name: TongHopTinTuc Cron
+
+on:
+  schedule:
+    # World news: Phút 0 mỗi giờ (UTC) = 7h sáng Việt Nam
+    - cron: '0 * * * *'
+    # Tech news: Phút 30 mỗi giờ (UTC) = 7h30 sáng Việt Nam  
+    - cron: '30 * * * *'
+  # Cho phép chạy thủ công
+  workflow_dispatch:
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Gọi API World News (phút 0)
+        if: github.event.schedule != '30 * * * *'
+        run: |
+          echo "Running World News pipeline..."
+          curl -X POST "https://tonghoptintuc.leesun190590.workers.dev/run" \
+            -H "Content-Type: application/json" \
+            -d '{"category":"world"}' \
+            || echo "World API failed"
+        env:
+          WORKER_URL: https://tonghoptintuc.leesun190590.workers.dev
+
+      - name: Gọi API Tech News (phút 30)
+        if: github.event.schedule == '30 * * * *'
+        run: |
+          echo "Running Tech News pipeline..."
+          curl -X POST "https://tonghoptintuc.leesun190590.workers.dev/run" \
+            -H "Content-Type: application/json" \
+            -d '{"category":"tech"}' \
+            || echo "Tech API failed"
+        env:
+          WORKER_URL: https://tonghoptintuc.leesun190590.workers.dev
+
+      - name: Kiểm tra kết quả
+        run: |
+          echo "Cron job completed"
+          echo "Time: ${{ github.event.schedule }}"
