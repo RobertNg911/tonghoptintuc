@@ -1,5 +1,7 @@
 const fs = require('fs');
 const axios = require('axios');
+const { Blob } = require('buffer');
+const FormData = require('form-data');
 
 const FB_PAGE_ID = process.env.FB_PAGE_ID;
 const FB_TOKEN = process.env.FB_TOKEN;
@@ -9,14 +11,16 @@ const IMAGE_FILE = process.env.IMAGE_FILE || 'image.png';
 
 async function uploadImage(imagePath, token) {
   console.log('📤 Uploading image...');
-  const formData = new axios.FormData();
-  formData.append('source', fs.createReadStream(imagePath));
-  formData.append('access_token', token);
+  const imageBuffer = fs.readFileSync(imagePath);
+  
+  const form = new FormData();
+  form.append('source', new Blob([imageBuffer]), 'image.png');
+  form.append('access_token', token);
   
   const response = await axios.post(
     `https://graph.facebook.com/v18.0/${FB_PAGE_ID}/photos`,
-    formData,
-    { headers: { 'Content-Type': 'multipart/form-data' } }
+    form,
+    { headers: form.getHeaders() }
   );
   return response.data.id;
 }
