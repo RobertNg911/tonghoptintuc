@@ -346,6 +346,8 @@
     const REPO_NAME = 'tonghoptintuc';
     const WORKFLOW_FILE = 'cron.yml';
     
+    const getToken = () => localStorage.getItem('gh_token');
+    
     const PIPELINE_STEPS = [
       { id: 'checkout', name: 'Checkout code' },
       { id: 'setup-node', name: 'Setup Node.js' },
@@ -394,20 +396,60 @@
     }
     
     async function runPipeline(category) {
+      let token = getToken();
+      if (!token) {
+        token = prompt('Nhập GitHub Token (chỉ cần nhập 1 lần):\n\nToken cần quyền: repo + workflow\nLấy token tại: https://github.com/settings/tokens');
+        if (token) localStorage.setItem('gh_token', token);
+      }
+      
       const result = document.getElementById('result');
       result.className = 'result show running';
+      
+      if (!token) {
+        result.innerHTML = `
+          <h3>⏳ Chuyển sang GitHub Actions...</h3>
+          <p>Vui lòng bấm "Run workflow" để chạy.</p>
+          <p style="margin-top:10px;"><a href="https://github.com/${REPO_OWNER}/${REPO_NAME}/actions/workflows/${WORKFLOW_FILE}/dispatches" target="_blank" class="btn btn-primary">Mở GitHub Actions</a></p>
+        `;
+        return;
+      }
+      
       result.innerHTML = `
-        <h3>⏳ Đang khởi động pipeline ${category === 'world' ? '🌍 Thế giới' : '💻 Công nghệ'}...</h3>
-        <p>Vui lòng đợi trong giây lát. Hệ thống sẽ tự động theo dõi tiến trình.</p>
-        <div class="progress-bar"><div class="progress-fill" style="width: 10%"></div></div>
-        <p style="font-size:12px;color:#666;margin-top:10px;">Mở <a href="https://github.com/${REPO_OWNER}/${REPO_NAME}/actions" target="_blank">GitHub Actions</a> để xem chi tiết</p>
+        <h3>🚀 Đang kích hoạt pipeline ${category === 'world' ? '🌍 Thế giới' : '💻 Công nghệ'}...</h3>
+        <p>Đang gửi request đến GitHub...</p>
+        <div class="progress-bar"><div class="progress-fill" style="width: 30%"></div></div>
       `;
       
-      // Open GitHub Actions in new tab
-      window.open(`https://github.com/${REPO_OWNER}/${REPO_NAME}/actions/workflows/${WORKFLOW_FILE}/dispatches`, '_blank');
-      
-      // Poll for status
-      await pollLatestRun(category);
+      try {
+        const resp = await fetch(
+          `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/workflows/${WORKFLOW_FILE}/dispatches`,
+          {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/vnd.github.v3+json',
+              'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({ ref: 'master', inputs: { category } })
+          }
+        );
+        
+        if (resp.ok) {
+          result.innerHTML = `
+            <h3>✅ Pipeline đã được kích hoạt!</h3>
+            <p>Đang theo dõi tiến trình...</p>
+            <div class="progress-bar"><div class="progress-fill" style="width: 50%"></div></div>
+          `;
+          await pollLatestRun(category);
+        } else {
+          throw new Error('API error: ' + resp.status);
+        }
+      } catch (e) {
+        result.innerHTML = `
+          <h3>⚠️ Lỗi: ${e.message}</h3>
+          <p>Chuyển sang GitHub Actions...</p>
+          <p style="margin-top:10px;"><a href="https://github.com/${REPO_OWNER}/${REPO_NAME}/actions/workflows/${WORKFLOW_FILE}/dispatches" target="_blank" class="btn btn-primary">Mở GitHub Actions</a></p>
+        `;
+      }
     }
     
     async function pollLatestRun(category) {
