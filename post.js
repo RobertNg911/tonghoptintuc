@@ -1,26 +1,42 @@
 const fs = require('fs');
 const axios = require('axios');
-const { Blob } = require('buffer');
 const FormData = require('form-data');
+const path = require('path');
 
 const FB_PAGE_ID = process.env.FB_PAGE_ID;
 const FB_TOKEN = process.env.FB_TOKEN;
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const SCHEDULED_MINUTES = parseInt(process.env.SCHEDULED_MINUTES) || 0;
 const SCHEDULE_INDEX = parseInt(process.env.SCHEDULE_INDEX) || 0;
 const IMAGE_FILE = process.env.IMAGE_FILE || 'image.png';
 
+async function sendTelegram(message) {
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
+  await axios.post(
+    `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+    { chat_id: TELEGRAM_CHAT_ID, text: message, parse_mode: 'Markdown' }
+  );
+}
+
 async function uploadImage(imagePath, token) {
   console.log('📤 Uploading image...');
-  const imageBuffer = fs.readFileSync(imagePath);
   
   const form = new FormData();
-  form.append('source', new Blob([imageBuffer]), 'image.png');
+  form.append('source', fs.createReadStream(imagePath), {
+    filename: path.basename(imagePath),
+    contentType: 'image/png'
+  });
   form.append('access_token', token);
   
   const response = await axios.post(
     `https://graph.facebook.com/v18.0/${FB_PAGE_ID}/photos`,
     form,
-    { headers: form.getHeaders() }
+    { 
+      headers: form.getHeaders(),
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity
+    }
   );
   return response.data.id;
 }
@@ -54,6 +70,8 @@ async function post() {
   }
 
   let imageId = null;
+  let imageUploadFailed = false;
+  
   if (fs.existsSync(IMAGE_FILE)) {
     const imageStats = fs.statSync(IMAGE_FILE);
     console.log(`📸 Image file exists: ${IMAGE_FILE} (${imageStats.size} bytes)`);
@@ -62,10 +80,18 @@ async function post() {
       console.log('✅ Image uploaded, ID:', imageId);
     } catch (e) {
       console.log('⚠️ Image upload failed:', e.message);
-      console.log('⚠️ Posting text only');
+      imageUploadFailed = true;
     }
   } else {
     console.log('⚠️ No image file found:', IMAGE_FILE);
+    imageUploadFailed = true;
+  }
+  
+  if (imageUploadFailed) {
+    const errMsg = `❌ TongHopTinTuc LỖI: Upload ảnh thất bại!`;
+    console.log(errMsg);
+    await sendTelegram(errMsg);
+    process.exit(1);
   }
 
   const postData = { message: content, access_token: FB_TOKEN };
@@ -97,7 +123,8 @@ async function post() {
   }
 }
 
-post().catch(e => {
+post().catch(async e => {
   console.error('❌ Fatal:', e.message);
+  await sendTelegram(`❌ TongHopTinTuc LỖI: ${e.message}`);
   process.exit(1);
 });
