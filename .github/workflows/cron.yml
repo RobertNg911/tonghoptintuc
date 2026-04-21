@@ -90,16 +90,14 @@ jobs:
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: node gen-image.js
-        continue-on-error: true
 
       - name: Check image result
         run: |
           if [ -f image.png ]; then
-            echo "✅ Image generated"
+            echo "✅ Image generated: $(ls -la image.png | awk '{print $5}') bytes"
           else
-            echo "⚠️ No image - posting text only"
+            echo "⚠️ No image generated - will post text only"
           fi
-        continue-on-error: true
       
       - name: Post to Facebook
         env:

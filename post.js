@@ -51,12 +51,17 @@ async function post() {
 
   let imageId = null;
   if (fs.existsSync(IMAGE_FILE)) {
+    const imageStats = fs.statSync(IMAGE_FILE);
+    console.log(`📸 Image file exists: ${IMAGE_FILE} (${imageStats.size} bytes)`);
     try {
       imageId = await uploadImage(IMAGE_FILE, FB_TOKEN);
       console.log('✅ Image uploaded, ID:', imageId);
     } catch (e) {
-      console.log('⚠️ Image upload failed, posting text only');
+      console.log('⚠️ Image upload failed:', e.message);
+      console.log('⚠️ Posting text only');
     }
+  } else {
+    console.log('⚠️ No image file found:', IMAGE_FILE);
   }
 
   const postData = { message: content, access_token: FB_TOKEN };
