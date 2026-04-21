@@ -122,6 +122,8 @@ jobs:
               -d "text=🔥 *TongHopTinTuc* - $CATEGORY%0A$CONTENT..." \
               -d "parse_mode=Markdown" || true
           fi
+
+
         
       - name: Report failure
         if: failure()

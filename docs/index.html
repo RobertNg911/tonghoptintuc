@@ -541,9 +541,19 @@
     
     async function loadHistory() {
       const list = document.getElementById('historyList');
-      const currentDiv = document.getElementById('currentRun');
       
       try {
+        // Try to load from history.json first
+        const historyResponse = await fetch('history.json');
+        if (historyResponse.ok) {
+          const history = await historyResponse.json();
+          if (history && history.length > 0) {
+            renderHistory(history.slice(0, 5));
+            return;
+          }
+        }
+        
+        // Fallback to GitHub API
         const response = await fetch(
           `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/workflows/${WORKFLOW_FILE}/runs?per_page=6`,
           { headers: { 'Accept': 'application/vnd.github.v3+json' } }
@@ -552,59 +562,66 @@
         if (!response.ok) throw new Error('API error');
         
         const data = await response.json();
-        
         if (!data.workflow_runs || data.workflow_runs.length === 0) {
-          list.innerHTML = '<p>Chưa có lịch sử</p>';
+          list.innerHTML = '<p>Chưa có lịch sử. Chạy pipeline để bắt đầu!</p>';
           return;
         }
         
-        let html = '';
-        let isFirst = true;
+        // Convert to history format
+        const history = data.workflow_runs.map(run => ({
+          timestamp: run.created_at,
+          category: run.head_branch,
+          status: run.conclusion === 'success' ? 'success' : (run.conclusion === 'failure' ? 'error' : 'pending'),
+          url: run.html_url
+        }));
         
-        for (const run of data.workflow_runs) {
-          if (isFirst) {
-            isFirst = false;
-            continue;
-          }
-          
-          const date = new Date(run.created_at);
-          const timeStr = date.toLocaleString('vi-VN', { 
-            day: '2-digit', month: '2-digit', year: 'numeric', 
-            hour: '2-digit', minute: '2-digit' 
-          });
-          
-          let statusClass, statusText;
-          if (run.status === 'in_progress' || run.status === 'queued') {
-            statusClass = 'pending';
-            statusText = '⏳ Đang chạy';
-          } else if (run.conclusion === 'success') {
-            statusClass = 'success';
-            statusText = '✅ Thành công';
-          } else if (run.conclusion === 'failure') {
-            statusClass = 'error';
-            statusText = '❌ Thất bại';
-          } else {
-            statusClass = 'pending';
-            statusText = '⚪ ' + (run.conclusion || run.status);
-          }
-          
-          const category = run.head_branch === 'tech' ? '💻 Tech' : '🌍 World';
-          
-          html += '<div class="history-item ' + statusClass + '">' +
-            '<div class="history-header">' +
-              '<span class="history-status ' + statusClass + '">' + statusText + '</span>' +
-              '<span class="history-time">' + timeStr + '</span>' +
-            '</div>' +
-            '<div class="history-message">' + category + ' - Run #' + run.run_number + '</div>' +
-            '<div><a href="' + run.html_url + '" target="_blank" style="color:#60a5fa;font-size:12px;">Xem chi tiết →</a></div>' +
-          '</div>';
-        }
-        
-        list.innerHTML = html;
+        renderHistory(history);
         
       } catch (e) {
-        list.innerHTML = '<p>❌ Lỗi: ' + e.message + '</p>';
+        list.innerHTML = '<p>Chưa có lịch sử. Chạy pipeline để bắt đầu!</p>';
       }
+    }
+    
+    function renderHistory(history) {
+      const list = document.getElementById('historyList');
+      let html = '';
+      
+      for (const run of history) {
+        const date = new Date(run.timestamp);
+        const timeStr = date.toLocaleString('vi-VN', { 
+          day: '2-digit', month: '2-digit', year: 'numeric', 
+          hour: '2-digit', minute: '2-digit' 
+        });
+        
+        let statusClass, statusText;
+        if (run.status === 'success') {
+          statusClass = 'success';
+          statusText = '✅ Thành công';
+        } else if (run.status === 'error') {
+          statusClass = 'error';
+          statusText = '❌ Thất bại';
+        } else {
+          statusClass = 'pending';
+          statusText = '⏳ Đang chạy';
+        }
+        
+        const category = run.category === 'tech' ? '💻 Tech' : '🌍 World';
+        
+        html += '<div class="history-item ' + statusClass + '">' +
+          '<div class="history-header">' +
+            '<span class="history-status ' + statusClass + '">' + statusText + '</span>' +
+            '<span class="history-time">' + timeStr + '</span>' +
+          '</div>' +
+          '<div class="history-message">' + category + '</div>';
+        
+        if (run.url) {
+          html += '<div><a href="' + run.url + '" target="_blank" style="color:#60a5fa;font-size:12px;">Xem chi tiết →</a></div>';
+        }
+        
+        html += '</div>';
+      }
+      
+      list.innerHTML = html;
     }
     
     loadHistory();
