@@ -19,15 +19,17 @@
         ▼                  ▼                  ▼
 ┌───────────────┐  ┌──────────────┐  ┌──────────────┐
 │ fetch-news.js │  │ generate.js  │  │ gen-image.js │
-│   RSS feeds   │  │  Groq AI    │  │ Pollinations │
-└───────────────┘  └──────────────┘  └──────────────┘
-        │                  │                  │
-        └──────────────────┼──────────────────┘
+│  RSS feeds   │  │  5 contents  │  │  5 images   │
+│ scorer.js    │  │  Groq AI    │  │ Pollinations │
+│ ranker.js    │  └──────────────┘  └──────────────┘
+└───────────────┘
+                           │
                            ▼
-                    ┌──────────────┐
-                    │   post.js    │
-                    │   Facebook   │
-                    └──────────────┘
+                    ┌──────────────────────┐
+                    │   post.js × 5        │
+                    │   10 min apart       │
+                    │   Facebook scheduling│
+                    └──────────────────────┘
 ```
 
 ---
@@ -83,9 +85,10 @@
 ## Features
 
 - ✅ Auto fetch RSS feeds (world + tech)
-- ✅ AI content generation (Groq Llama 3.3)
-- ✅ AI image generation (Pollinations.ai)
-- ✅ Post to Facebook with image
+- ✅ Score + rank top 5 hot news
+- ✅ Generate 5 contents with AI (Groq Llama 3.3)
+- ✅ Generate 5 images (Pollinations.ai)
+- ✅ Post 5 articles to Facebook (10 min apart)
 - ✅ Hourly cron (GitHub Actions)
 - ✅ Telegram alerts on failure
 - ✅ Dashboard UI

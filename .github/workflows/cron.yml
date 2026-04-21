@@ -75,7 +75,7 @@ jobs:
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           FB_TOKEN: ${{ secrets.FB_TOKEN }}
           SCHEDULE_INDEX: 1
-          SCHEDULED_MINUTES: 15
+          SCHEDULED_MINUTES: 10
         run: node post.js
         continue-on-error: true
       
@@ -84,7 +84,7 @@ jobs:
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           FB_TOKEN: ${{ secrets.FB_TOKEN }}
           SCHEDULE_INDEX: 2
-          SCHEDULED_MINUTES: 30
+          SCHEDULED_MINUTES: 20
         run: node post.js
         continue-on-error: true
       
@@ -93,7 +93,7 @@ jobs:
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           FB_TOKEN: ${{ secrets.FB_TOKEN }}
           SCHEDULE_INDEX: 3
-          SCHEDULED_MINUTES: 45
+          SCHEDULED_MINUTES: 30
         run: node post.js
         continue-on-error: true
       
@@ -102,7 +102,7 @@ jobs:
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           FB_TOKEN: ${{ secrets.FB_TOKEN }}
           SCHEDULE_INDEX: 4
-          SCHEDULED_MINUTES: 60
+          SCHEDULED_MINUTES: 40
         run: node post.js
         continue-on-error: true
 
