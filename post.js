@@ -76,28 +76,35 @@ async function post() {
     const imageStats = fs.statSync(IMAGE_FILE);
     console.log(`📸 Image file exists: ${IMAGE_FILE} (${imageStats.size} bytes)`);
     try {
-      imageId = await uploadImage(IMAGE_FILE, FB_TOKEN);
-      console.log('✅ Image uploaded, ID:', imageId);
+      // Upload ảnh kèm caption trực tiếp - tạo 1 bài với ảnh + text
+      console.log('📤 Posting with image...');
+      const form = new FormData();
+      form.append('caption', content);
+      form.append('access_token', FB_TOKEN);
+      form.append('source', fs.createReadStream(IMAGE_FILE), {
+        filename: path.basename(IMAGE_FILE),
+        contentType: 'image/png'
+      });
+      
+      const response = await axios.post(
+        `https://graph.facebook.com/v18.0/${FB_PAGE_ID}/photos`,
+        form,
+        { headers: form.getHeaders(), maxContentLength: Infinity, maxBodyLength: Infinity }
+      );
+      imageId = response.data.id;
+      console.log('✅ Done! Post with image. ID:', imageId);
+      process.exit(0);
     } catch (e) {
       console.log('⚠️ Image upload failed:', e.message);
       imageUploadFailed = true;
     }
-  } else {
-    console.log('⚠️ No image file found:', IMAGE_FILE);
-    imageUploadFailed = true;
   }
   
   if (imageUploadFailed) {
-    const errMsg = `❌ TongHopTinTuc LỖI: Upload ảnh thất bại!`;
-    console.log(errMsg);
-    await sendTelegram(errMsg);
-    process.exit(1);
+    console.log('⚠️ Posting text only (no image)...');
   }
-
+  
   const postData = { message: content, access_token: FB_TOKEN };
-  if (imageId) {
-    postData.attached_media = [{ media_fbid: imageId }];
-  }
 
   if (SCHEDULED_MINUTES > 0) {
     const minutesOffset = SCHEDULE_INDEX * SCHEDULED_MINUTES;
@@ -119,6 +126,7 @@ async function post() {
   } catch (e) {
     console.error('❌ Facebook API Error:');
     if (e.response?.data) console.error(JSON.stringify(e.response.data));
+    await sendTelegram(`❌ TongHopTinTuc LỖI: ${e.message}`);
     process.exit(1);
   }
 }
