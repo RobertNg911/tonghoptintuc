@@ -18,7 +18,7 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     
     steps:
       - uses: actions/checkout@v4
@@ -30,18 +30,8 @@ jobs:
       
       - name: Install dependencies
         run: npm install axios xml2js form-data
-        
-      - name: Report install result
-        if: success()
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          echo "✅ Install dependencies done"
-        continue-on-error: true
       
       - name: Determine category
-        id: category
         run: |
           if [ "${{ github.event.schedule }}" = "30 * * * *" ]; then
             echo "CATEGORY=tech" >> $GITHUB_ENV
@@ -51,63 +41,72 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "CATEGORY=${{ github.event.inputs.category }}" >> $GITHUB_ENV
           fi
+          echo "Running $CATEGORY pipeline..."
       
-      - name: Fetch feeds
+      - name: Fetch and rank news
         run: node fetch-news.js
-        continue-on-error: true
-        
-      - name: Check fetch result
-        run: |
-          if [ -f news.json ]; then
-            COUNT=$(node -e "console.log(require('./news.json').length)")
-            echo "✅ Fetched $COUNT news"
-            if [ "$COUNT" = "0" ]; then
-              echo "::warning::No news fetched"
-            fi
-          else
-            echo "::error::No news.json file created"
-            exit 1
-          fi
-        continue-on-error: true
       
-      - name: Generate content
+      - name: Generate 5 contents
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-        run: node generate.js
-        continue-on-error: true
-
-      - name: Check generate result
+          CONTENT_COUNT: 5
         run: |
-          if [ -f content.txt ]; then
-            echo "✅ Content generated"
-          else
-            echo "::error::No content.txt - AI failed"
-            exit 1
-          fi
-        continue-on-error: true
-
-      - name: Generate image
+          node generate.js
+          echo "Content files:"
+          ls -la content-*.txt 2>/dev/null || echo "No content files"
+      
+      - name: Generate 5 images
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          IMAGE_COUNT: 5
         run: node gen-image.js
-
-      - name: Check image result
-        run: |
-          if [ -f image.png ]; then
-            echo "✅ Image generated: $(ls -la image.png | awk '{print $5}') bytes"
-          else
-            echo "⚠️ No image generated - will post text only"
-          fi
       
-      - name: Post to Facebook
+      - name: Post 1 of 5
         env:
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           FB_TOKEN: ${{ secrets.FB_TOKEN }}
-          IMAGE_FILE: image.png
+          SCHEDULE_INDEX: 0
+          SCHEDULED_MINUTES: 0
         run: node post.js
         continue-on-error: true
-        
-- name: Report failure
+      
+      - name: Post 2 of 5
+        env:
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_TOKEN: ${{ secrets.FB_TOKEN }}
+          SCHEDULE_INDEX: 1
+          SCHEDULED_MINUTES: 15
+        run: node post.js
+        continue-on-error: true
+      
+      - name: Post 3 of 5
+        env:
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_TOKEN: ${{ secrets.FB_TOKEN }}
+          SCHEDULE_INDEX: 2
+          SCHEDULED_MINUTES: 30
+        run: node post.js
+        continue-on-error: true
+      
+      - name: Post 4 of 5
+        env:
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_TOKEN: ${{ secrets.FB_TOKEN }}
+          SCHEDULE_INDEX: 3
+          SCHEDULED_MINUTES: 45
+        run: node post.js
+        continue-on-error: true
+      
+      - name: Post 5 of 5
+        env:
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_TOKEN: ${{ secrets.FB_TOKEN }}
+          SCHEDULE_INDEX: 4
+          SCHEDULED_MINUTES: 60
+        run: node post.js
+        continue-on-error: true
+
+      - name: Report failure
         if: failure()
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}

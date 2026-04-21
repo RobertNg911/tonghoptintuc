@@ -7,9 +7,10 @@ const FB_PAGE_ID = process.env.FB_PAGE_ID;
 const FB_TOKEN = process.env.FB_TOKEN;
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
-const SCHEDULED_MINUTES = parseInt(process.env.SCHEDULED_MINUTES) || 0;
+const SCHEDULED_MINUTES = parseInt(process.env.SCHEDULED_MINUTES) || 15;
 const SCHEDULE_INDEX = parseInt(process.env.SCHEDULE_INDEX) || 0;
-const IMAGE_FILE = process.env.IMAGE_FILE || 'image.png';
+const IMAGE_FILE = process.env.IMAGE_FILE || `image-${SCHEDULE_INDEX + 1}.png`;
+const CONTENT_FILE = process.env.CONTENT_FILE || `content-${SCHEDULE_INDEX + 1}.txt`;
 
 async function sendTelegram(message) {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
@@ -48,8 +49,8 @@ async function post() {
     contentFiles = process.env.CONTENT_FILE.split(',').map(f => f.trim());
   }
 
-  const fileIndex = Math.min(SCHEDULE_INDEX, contentFiles.length - 1);
-  const contentFile = contentFiles[fileIndex] || contentFiles[0];
+  const contentFile = CONTENT_FILE;
+  console.log(`📄 Reading: ${contentFile}`);
 
   try {
     content = fs.readFileSync(contentFile, 'utf8').trim();

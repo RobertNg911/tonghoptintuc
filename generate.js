@@ -2,8 +2,45 @@ const fs = require('fs');
 const axios = require('axios');
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const COUNT = parseInt(process.env.CONTENT_COUNT) || 5;
 
-async function generate() {
+async function generateContent(item) {
+  const prompt = `Vai trò: Bạn là một Content Creator chuyên viết "content bẩn" (hài hước), có khiếu châm biếm sâu cay và cực kỳ am hiểu tâm lý cư dân mạng Việt Nam.
+
+Nhiệm vụ: Viết một bài đăng Facebook về tin này:
+"${item.title}"
+
+Nguồn: ${item.source}
+
+Yêu cầu về văn phong:
+- Ngôn ngữ: Tiếng lóng Gen Z, viral, so sánh "ngược đời"
+- Hook: Cực mạnh, gây tò mò, đánh vào nỗi đau
+- Thân bài: "Bóc trần" sự thật, châm biếm
+- Kết bài: Câu chốt "xanh chín" hoặc câu hỏi tương tác
+- Định dạng: Icon, xuống dòng hợp lý cho mobile
+- Tone: Châm biếm, hài hước, "xéo sắc"
+- Ngôn ngữ: 100% tiếng Việt có dấu
+- Độ dài: 200-300 từ
+- Hashtag: 3-5 hashtag tiếng Việt`;
+
+  const response = await axios.post(
+    'https://api.groq.com/openai/v1/chat/completions',
+    {
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 400
+    },
+    { headers: { 'Authorization': `Bearer ${GROQ_API_KEY}` } }
+  );
+  
+  if (!response.data.choices?.[0]?.message?.content) {
+    throw new Error('AI response empty');
+  }
+  
+  return response.data.choices[0].message.content;
+}
+
+async function main() {
   let items = [];
   try {
     items = JSON.parse(fs.readFileSync('news.json', 'utf8'));
@@ -17,72 +54,25 @@ async function generate() {
     process.exit(1);
   }
   
-  const topicWords = {};
-  for (const item of items) {
-    const words = item.title.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/);
-    for (const w of words) {
-      if (w.length > 3 && !['that','this','with','from','have','what','will'].includes(w)) {
-        topicWords[w] = (topicWords[w] || 0) + 1;
-      }
+  console.log(`✅ Generating ${COUNT} contents from ${items.length} news...`);
+  
+  for (let i = 0; i < Math.min(COUNT, items.length); i++) {
+    const item = items[i];
+    try {
+      const content = await generateContent(item);
+      const filename = `content-${i + 1}.txt`;
+      fs.writeFileSync(filename, content);
+      console.log(`✅ [${i + 1}/${COUNT}] ${filename}: ${item.title.substring(0, 40)}...`);
+    } catch (e) {
+      console.error(`❌ [${i + 1}] Failed: ${e.message}`);
+      fs.writeFileSync(`content-${i + 1}.txt`, `❌ FAILED: ${e.message}`);
     }
   }
   
-  const topic = Object.entries(topicWords).sort((a, b) => b[1] - a[1])[0]?.[0] || 'tin-tuc';
-  const news = items.slice(0, 5).map(i => `- ${i.title}`).join('\n');
-  
-  const prompt = `Vai trò: Bạn là một Content Creator chuyên viết "content bẩn" (hài hước), có khiếu châm biếm sâu cay và cực kỳ am hiểu tâm lý cư dân mạng Việt Nam.
-
-Nhiệm vụ: Viết một bài đăng Facebook về chủ đề: ${topic}
-
-Nguồn:
-${news}
-
-Yêu cầu về văn phong:
-- Ngôn ngữ: Sử dụng tiếng lóng của Gen Z, các câu nói viral, hoặc cách so sánh ví von "ngược đời"
-- Hook (Mở bài): Phải cực mạnh, gây tò mò hoặc đánh ngay vào nỗi đau/sự thật phũ phàng bằng giọng điệu mỉa mai
-- Thân bài: Triển khai nội dung bằng cách "bóc trần" sự thật, dùng phép nói quá hoặc châm biếm. Tránh viết kiểu quảng cáo sáo rỗng
-- Kết bài: Một câu chốt hạ "xanh chín" hoặc một câu hỏi tương tác khiến người ta phải comment vì ức chế hoặc vì quá đúng
-- Định dạng: Sử dụng các icon phù hợp nhưng không lạm dụng. Xuống dòng hợp lý để dễ đọc trên điện thoại
-- Tone giọng: Châm biếm, hài hước, hơi "xéo sắc" một chút nhưng không vi phạm tiêu chuẩn cộng đồng
-- Ngôn ngữ BẮT BUỘC: 100% tiếng Việt có dấu, không được lẫn tiếng Anh
-- Độ dài: 200-300 từ
-- Hashtag: 3-5 hashtag tiếng Việt ở cuối`;
-
-  try {
-    const response = await axios.post(
-      'https://api.groq.com/openai/v1/chat/completions',
-      {
-        model: 'llama-3.3-70b-versatile',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 400
-      },
-      { headers: { 'Authorization': `Bearer ${GROQ_API_KEY}` } }
-    );
-    
-    if (!response.data.choices || !response.data.choices[0]) {
-      console.error('❌ AI response empty');
-      process.exit(1);
-    }
-    
-    const content = response.data.choices[0].message.content;
-    fs.writeFileSync('content.txt', content);
-    console.log('✅ Content generated');
-    console.log('---');
-    console.log(content.substring(0, 200));
-    console.log('---');
-    
-  } catch (e) {
-    console.error('❌ AI Error:', e.message);
-    if (e.response?.data) {
-      console.error('Response:', JSON.stringify(e.response.data));
-    }
-    fs.writeFileSync('content.txt', `❌ AI FAILED: ${e.message}`);
-    process.exit(1);
-  }
+  console.log('✅ Done generating contents');
 }
 
-generate().catch(e => {
-  console.error('❌ Fatal Error:', e.message);
-  fs.writeFileSync('content.txt', `❌ FATAL: ${e.message}`);
+main().catch(e => {
+  console.error('❌ Fatal:', e.message);
   process.exit(1);
 });
