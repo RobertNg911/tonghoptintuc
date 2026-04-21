@@ -2,7 +2,7 @@
 
 ## Status: ✅ UPDATED
 
-**Audit Date**: 2026-04-21
+**Audit Date**: 2026-04-22
 
 ## Validation Checks
 
@@ -10,33 +10,37 @@
 |-------------|---------|--------|--------|
 | Text rewriting | Gemini 2.5 Flash | Groq Llama 3.3 | ✅ Implemented |
 | Image generation | Leonardo.ai | Pollinations.ai | ✅ Implemented |
-| Multi-account | Leonardo rotation | Disabled | ⚠️ Removed |
-
-## Gaps
-
-✅ All resolved:
-1. **Image: Pollinations.ai** - Sử dụng src/services/image.js (không phải HuggingFace)
-2. **Text: Groq Llama 3.3** - Sử dụng trong generate.js
-3. **huggingface.js, gemini.js** - Tồn tại nhưng chưa được sử dụng
+| Image upload | Attach to post | Upload /photos with caption | ✅ Implemented |
+| Error handling | Silent fail | Telegram on failure | ✅ Implemented |
+| Telegram notify | On success + failure | Only on failure | ✅ Implemented |
 
 ## Files Created (Actual)
 
 | File | Status | Usage |
 |------|--------|-------|
 | src/services/image.js | ✅ | **ACTIVE** - Polinations.ai |
-| src/services/huggingface.js | ✅ | Unused |
-| src/services/gemini.js | ✅ | Unused |
-| src/services/zimage.js | ✅ | Unused |
-| src/services/alert.js | ✅ | Unused |
-| src/feeds/scorer.js | ✅ | Unused |
-| src/feeds/ranker.js | ✅ | Unused |
+| gen-image.js | ✅ | **ACTIVE** - generates image prompt + image |
+| post.js | ✅ | **ACTIVE** - upload /photos with caption |
+| generate.js | ✅ | **ACTIVE** - Groq content generation |
+
+## Unused Files (To Clean)
+
+| File | Status |
+|------|--------|
+| src/services/huggingface.js | ❌ Unused |
+| src/services/gemini.js | ❌ Unused |
+| src/services/zimage.js | ❌ Unused |
+| src/services/alert.js | ❌ Unused |
+| src/feeds/scorer.js | ❌ Unused |
+| src/feeds/ranker.js | ❌ Unused |
 
 ## Recommended Actions
 
-- [x] Update VALIDATION.md to reflect Polinations.ai + Groq
-- [ ] Consider removing unused services (huggingface.js, gemini.js, zimage.js, alert.js)
-- [ ] Consider implementing scorer.js and ranker.js for feed ranking
+- [x] Update VALIDATION.md to reflect current state
+- [x] Image upload directly to /photos with caption
+- [x] Telegram only on failure
+- [ ] Clean up unused services
 
 ---
 
-*Validated: 2026-04-21*
+*Validated: 2026-04-22*
