@@ -1,65 +1,83 @@
 # TongHopTinTuc - Project State
 
-## Project Reference
+## ⚠️ Updated: 2026-04-22
 
-**Core Value**: Tự động tổng hợp tin hot từ nhiều nguồn, viết lại bằng AI và đăng lên Facebook mỗi giờ — không cần can thiệp thủ công.
-
-**Current Focus**: Planning — creating roadmap
-
-## Current Position
-
-| Field | Value |
-|-------|-------|
-| **Phase** | Planning (Roadmap Creation) |
-| **Plan** | N/A |
-| **Status** | Creating Roadmap |
-| **Progress Bar** | ████░░░░░░░░░░░░ 20% (1 of 5 phases roadmapped) |
-
-## Performance Metrics
-
-| Metric | Value | Notes |
-|--------|-------|-------|
-| v1 Requirements | 17 total | All mapped to phases |
-| Phases | 5 | Coarse granularity |
-| Requirements in Scope | 17 | All v1 covered |
-| Requirements Deferred | 0 | No orphans |
-
-## Accumulated Context
-
-### Decisions Made
-
-| Decision | Rationale | Status |
-|----------|-----------|--------|
-| 5 phases for coarse granularity | Combine related work (Scheduling + Monitoring, AI Text + Image) | Applied |
-| Phase ordering: Setup → Feed → FB → Schedule → AI | Natural dependency flow | Applied |
-
-### Research Insights
-
-- Facebook token requires Page Access Token (not user token)
-- Token expires after 60 days — need renewal mechanism
-- AI hallucinations 30-40% — may need verification step in v2
-- Randomize posting time to avoid spam detection
-
-### Todos
-
-- [ ] Review roadmap for user approval
-- [ ] Proceed to Phase 1 planning after approval
-
-### Blockers
-
-- None identified during roadmap creation
-
-## Session Continuity
-
-**Next Action**: Awaiting roadmap approval before proceeding to `/gsd-plan-phase 1`
-
-**Ready for Planning**:
-- Phase 1: Setup (Worker + Hono)
-- Phase 2: Feed Collection (RSS)
-- Phase 3: Facebook Integration
-- Phase 4: Scheduling + Monitoring
-- Phase 5: AI Processing
+> **Project Change**: Cloudflare Workers → GitHub Actions + Node.js scripts
 
 ---
 
-*State updated: 2026-04-12*
+## Current Status
+
+| Field | Value |
+|-------|-------|
+| **Phase** | Production (All phases complete) |
+| **Status** | 🟢 Operating |
+| **Progress Bar** | ████████████████ 100% |
+
+---
+
+## Current System
+
+| Component | File | Status |
+|-----------|------|--------|
+| RSS Feeds | `fetch-news.js` | 🟢 Active |
+| Content AI | `generate.js` | 🟢 Active |
+| Image AI | `gen-image.js` | 🟢 Active |
+| Facebook | `post.js` | 🟢 Active |
+| Scheduler | `.github/workflows/cron.yml` | 🟢 Active |
+| Dashboard | `docs/index.html` | 🟢 Active |
+
+---
+
+## Features Implemented
+
+- ✅ Auto fetch RSS feeds (world + tech categories)
+- ✅ AI content rewriting (Groq Llama 3.3)
+- ✅ AI image generation (Pollinations.ai)
+- ✅ Post to Facebook with image + caption (single post)
+- ✅ Hourly cron via GitHub Actions
+- ✅ Telegram notifications (failure only)
+- ✅ Dashboard with workflow trigger
+- ✅ Manual trigger from dashboard
+
+---
+
+## Environment Variables
+
+| Variable | Status | Notes |
+|----------|--------|-------|
+| `GROQ_API_KEY` | ✅ Set | Required |
+| `FB_PAGE_ID` | ✅ Set | Required |
+| `FB_TOKEN` | ✅ Set | Required |
+| `TELEGRAM_BOT_TOKEN` | ⚠️ Check | Optional |
+| `TELEGRAM_CHAT_ID` | ⚠️ Check | Optional |
+
+---
+
+## Files Structure
+
+```
+├── fetch-news.js      # RSS fetcher
+├── generate.js       # AI content
+├── gen-image.js      # AI image
+├── post.js         # Facebook
+├── package.json
+├── docs/
+│   ├── index.html    # Dashboard
+│   └── history.json
+└── .github/workflows/
+    ├── cron.yml      # Pipeline
+    └── deploy.yml    # Pages deploy
+```
+
+---
+
+## Todo
+
+- [ ] Clean up unused services (src/services/*.js)
+- [ ] Clean up unused feeds (src/feeds/*.js)
+- [ ] Test image with new GitHub token
+
+---
+
+*State updated: 2026-04-22*

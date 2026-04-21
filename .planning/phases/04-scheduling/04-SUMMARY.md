@@ -1,43 +1,21 @@
-# Phase 4 - Scheduling + Monitoring Summary
+# Phase 4 - Scheduling Summary
 
-## Status: ✅ COMPLETED
+## ✅ COMPLETED
 
-**Date**: 2026-04-12
+**Date**: 2026-04-22
 
-## Tasks Completed
+## Files
 
-| Task | Status |
+| File | Status |
 |------|--------|
-| 1. Configure Cloudflare Cron Trigger | ✅ |
-| 2. Create logger and scheduler services | ✅ |
-| 3. Create Telegram alerting service | ✅ |
-
-## Files Created
-
-| File | Description |
-|------|-------------|
-| `wrangler.toml` | Updated with cron triggers |
-| `src/services/logger.ts` | Structured logging |
-| `src/services/scheduler.ts` | Pipeline runner |
-| `src/services/alert.ts` | Telegram alerting |
-| `src/middleware/cron.ts` | Cron handler |
+| `.github/workflows/cron.yml` | ✅ ACTIVE |
 
 ## Features
-
-- Cloudflare Cron Trigger: `0 * * * *` (every hour)
-- Random delay 0-15 min to avoid spam detection
-- Logging: info, warn, error levels
-- Telegram alert on 3 consecutive failures
-
-## Env Variables Needed
-
-- `TELEGRAM_BOT_TOKEN` - Get from @BotFather
-- `TELEGRAM_CHAT_ID` - Your chat ID
-
-## Next Steps
-
-Proceed to Phase 5: AI Processing (already integrated in scheduler)
+- GitHub Actions cron: `0 * * * *` (world)
+- GitHub Actions cron: `30 * * * *` (tech)
+- Telegram alert on failure
+- Manual trigger from dashboard
 
 ---
 
-*Summary created: 2026-04-12*
+*Summary updated: 2026-04-22*
