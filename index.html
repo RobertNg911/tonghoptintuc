@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TongHopTinTuc - Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #e2e8f0; min-height: 100vh; }
+    .container { max-width: 1000px; margin: 0 auto; padding: 2rem; }
+    header { text-align: center; margin-bottom: 3rem; padding: 2rem 0; }
+    header h1 { font-size: 3rem; background: linear-gradient(90deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 0.5rem; }
+    header p { color: #94a3b8; font-size: 1.1rem; }
+    .hero { background: #1e293b; border-radius: 16px; padding: 2rem; margin-bottom: 2rem; text-align: center; border: 1px solid #334155; }
+    .hero h2 { color: #60a5fa; margin-bottom: 1rem; }
+    .hero code { background: #0f172a; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.9rem; }
+    .steps { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; margin: 1.5rem 0; }
+    .step { display: flex; align-items: center; gap: 0.5rem; background: #334155; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.9rem; }
+    .step-num { background: #60a5fa; color: #0f172a; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.8rem; }
+    .btn { display: inline-block; padding: 0.75rem 1.5rem; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; text-decoration: none; transition: all 0.2s; margin: 0.25rem; }
+    .btn:hover { background: #2563eb; transform: translateY(-2px); }
+    .btn.green { background: #10b981; }
+    .btn.green:hover { background: #059669; }
+    .section { background: #1e293b; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #334155; }
+    .section h3 { color: #60a5fa; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+    .news-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+    .news-card { background: #0f172a; padding: 1rem; border-radius: 8px; border: 1px solid #334155; }
+    .news-card .source { color: #60a5fa; font-size: 0.75rem; margin-bottom: 0.5rem; }
+    .news-card .title { font-size: 0.9rem; line-height: 1.4; }
+    .env-example { background: #0f172a; padding: 1rem; border-radius: 8px; font-family: monospace; font-size: 0.85rem; overflow-x: auto; }
+    .env-example .comment { color: #64748b; }
+    .env-example .key { color: #60a5fa; }
+    .env-example .value { color: #34d399; }
+    .badge { display: inline-block; padding: 0.25rem 0.5rem; background: #334155; border-radius: 4px; font-size: 0.75rem; margin-right: 0.5rem; }
+    .badge.ok { background: #064e3b; color: #34d399; }
+    .badge.fail { background: #7f1d1d; color: #fca5a5; }
+    .log { background: #0f172a; padding: 1rem; border-radius: 8px; font-family: monospace; font-size: 0.8rem; max-height: 300px; overflow-y: auto; }
+    .log-entry { padding: 0.25rem 0; }
+    .log-entry::before { content: '> '; color: #64748b; }
+    .log-entry.ok { color: #34d399; }
+    .log-entry.fail { color: #fca5a5; }
+    .hidden { display: none; }
+    footer { text-align: center; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #334155; color: #64748b; }
+    footer a { color: #60a5fa; text-decoration: none; }
+    #loading { text-align: center; padding: 2rem; color: #64748b; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>TongHopTinTuc</h1>
+      <p>Bot tổng hợp tin tức tự động đăng lên Facebook</p>
+    </header>
+
+    <div class="hero">
+      <h2>🚀 Chạy Dashboard Local</h2>
+      <div class="steps">
+        <div class="step"><span class="step-num">1</span> npm install</div>
+        <div class="step"><span class="step-num">2</span> Tạo .dev.vars</div>
+        <div class="step"><span class="step-num">3</span> npx serve</div>
+      </div>
+      <div style="margin-top: 1rem;">
+        <a href="https://github.com/RobertNg911/tonghoptintuc" class="btn" target="_blank">View Source</a>
+        <a href="https://github.com/RobertNg911/tonghoptintuc/fork" class="btn green" target="_blank">Fork & Deploy</a>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>📋 Cấu hình (.dev.vars)</h3>
+      <div class="env-example">
+<span class="comment"># Facebook</span>
+<span class="key">FACEBOOK_PAGE_ID</span>=<span class="value">976630878877881</span>
+<span class="key">FACEBOOK_ACCESS_TOKEN</span>=<span class="value">EAAX...</span>
+
+<span class="comment"># AI</span>
+<span class="key">GROQ_API_KEY</span>=<span class="value">gsk_...</span>
+
+<span class="comment"># Optional</span>
+<span class="key">CATEGORY</span>=<span class="value">world</span>
+<span class="key">SCHEDULED_MINUTES</span>=<span class="value">15</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>📰 Tin Tức Mới Nhất</h3>
+      <button class="btn" onclick="loadNews('world')">World News</button>
+      <button class="btn" onclick="loadNews('tech')">Tech News</button>
+      <div id="news-container" class="news-grid" style="margin-top: 1rem;"></div>
+      <div id="loading" class="hidden">Đang tải...</div>
+    </div>
+
+    <div class="section">
+      <h3>🔧 Test Services</h3>
+      <p style="color: #64748b; margin-bottom: 1rem;">Chạy local để test đầy đủ (cần API keys)</p>
+      <div class="steps">
+        <div class="step"><span class="badge">1</span> node fetch-news.js</div>
+        <div class="step"><span class="badge">2</span> node generate.js</div>
+        <div class="step"><span class="badge">3</span> node gen-image.js</div>
+        <div class="step"><span class="badge">4</span> node post.js</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>📝 Recent Logs</h3>
+      <div id="log" class="log">
+        <div class="log-entry">Dashboard loaded - Ready to test</div>
+      </div>
+    </div>
+
+    <footer>
+      <p>Source: <a href="https://github.com/RobertNg911/tonghoptintuc">github.com/RobertNg911/tonghoptintuc</a></p>
+      <p style="margin-top: 0.5rem; font-size: 0.8rem;">Deploy lên GitHub Pages: Settings → Pages → Deploy from main</p>
+    </footer>
+  </div>
+
+  <script>
+    const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+    const NEWS_SOURCES = {
+      world: [
+        { name: 'BBC', url: 'https://feeds.bbci.co.uk/news/world/rss.xml' },
+        { name: 'CNN', url: 'http://rss.cnn.com/rss/edition_world.rss' },
+        { name: 'Al Jazeera', url: 'https://www.aljazeera.com/xml/rss/all.xml' }
+      ],
+      tech: [
+        { name: 'TechCrunch', url: 'https://techcrunch.com/feed/' },
+        { name: 'The Verge', url: 'https://www.theverge.com/rss/index.xml' },
+        { name: 'Wired', url: 'https://www.wired.com/feed/rss' }
+      ]
+    };
+
+    function log(msg, type = '') {
+      const logEl = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry ' + type;
+      entry.textContent = msg;
+      logEl.insertBefore(entry, logEl.firstChild);
+      if (logEl.children.length > 20) logEl.lastChild.remove();
+    }
+
+    function parseRSS(xml, sourceName) {
+      const items = [];
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(xml, 'text/xml');
+      const entries = doc.querySelectorAll('item');
+      entries.forEach((item, i) => {
+        if (i >= 5) return;
+        items.push({
+          source: sourceName,
+          title: item.querySelector('title')?.textContent || '',
+          link: item.querySelector('link')?.textContent || ''
+        });
+      });
+      return items;
+    }
+
+    async function loadNews(category = 'world') {
+      const container = document.getElementById('news-container');
+      const loading = document.getElementById('loading');
+      
+      container.innerHTML = '';
+      loading.classList.remove('hidden');
+      log('Loading ' + category + ' news...');
+      
+      const allItems = [];
+      const sources = NEWS_SOURCES[category] || NEWS_SOURCES.world;
+      
+      for (const source of sources) {
+        try {
+          const response = await fetch(CORS_PROXY + encodeURIComponent(source.url));
+          const text = await response.text();
+          const items = parseRSS(text, source.name);
+          allItems.push(...items);
+          log(source.name + ': ' + items.length + ' items', 'ok');
+        } catch (e) {
+          log(source.name + ': failed', 'fail');
+        }
+      }
+      
+      loading.classList.add('hidden');
+      
+      if (allItems.length === 0) {
+        container.innerHTML = '<p style="color: #64748b;">Không tải được tin tức. Thử refresh trang.</p>';
+        return;
+      }
+      
+      container.innerHTML = allItems.map(item => `
+        <div class="news-card">
+          <div class="source">${item.source}</div>
+          <div class="title">${item.title}</div>
+        </div>
+      `).join('');
+      
+      log('Loaded ' + allItems.length + ' news items', 'ok');
+    }
+
+    // Auto load on start
+    loadNews('world');
+  </script>
+</body>
+</html>
