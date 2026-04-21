@@ -66,8 +66,10 @@ Yêu cầu về văn phong:
     
     const content = response.data.choices[0].message.content;
     fs.writeFileSync('content.txt', content);
-    console.log('✅ AI generated content');
-    console.log('Content:', content.substring(0, 100));
+    console.log('✅ Content generated');
+    console.log('---');
+    console.log(content.substring(0, 200));
+    console.log('---');
     
   } catch (e) {
     console.error('❌ AI Error:', e.message);
