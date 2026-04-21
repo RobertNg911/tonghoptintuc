@@ -2,6 +2,8 @@ const http = require('http');
 const https = require('https');
 const fs = require('fs');
 const { parseString } = require('xml2js');
+const { scoreAll } = require('./src/feeds/scorer');
+const { rankNews } = require('./src/feeds/ranker');
 
 const SOURCES = {
   world: [
@@ -79,8 +81,15 @@ async function fetchAll() {
     process.exit(1);
   }
 
-  fs.writeFileSync('news.json', JSON.stringify(items, null, 2));
-  console.log(`✅ Total ${items.length} items for ${CATEGORY}`);
+  // Score and rank news
+  const scored = scoreAll(items);
+  const hotNews = rankNews(scored, { top: 5 });
+  
+  fs.writeFileSync('news.json', JSON.stringify(hotNews, null, 2));
+  console.log(`✅ Ranked ${hotNews.length} hot items for ${CATEGORY}`);
+  hotNews.forEach((item, i) => {
+    console.log(`  ${i+1}. [${item.hotScore}pts] ${item.source}: ${item.title.substring(0, 50)}...`);
+  });
   process.exit(0);
 }
 
