@@ -35,7 +35,10 @@
 - ✅ AI content rewriting (Groq Llama 3.3)
 - ✅ AI image generation (Pollinations.ai)
 - ✅ Post to Facebook with image + caption (single post)
-- ✅ Hourly cron via GitHub Actions
+- ✅ 15-minute cron via GitHub Actions (world: */15, tech: 7,22,37,52)
+- ✅ Duplicate prevention via posted-links.json (24h retention)
+- ✅ Top 1 selection with hotScore >= 20
+- ✅ Retry logic (1 retry before fail)
 - ✅ Telegram notifications (failure only)
 - ✅ Dashboard with workflow trigger
 - ✅ Manual trigger from dashboard
@@ -58,15 +61,23 @@
 
 ```
 ├── fetch-news.js      # RSS fetcher
-├── generate.js       # AI content
-├── gen-image.js      # AI image
-├── post.js         # Facebook
+├── generate.js       # AI content (with retry)
+├── gen-image.js      # AI image (with retry)
+├── post.js           # Facebook (with markPosted + alerts)
+├── src/
+│   ├── feeds/
+│   │   ├── ranker.js # Top 1 selection (hotScore >= 20)
+│   │   └── scorer.js # News scoring
+│   └── services/
+│       ├── duplicate.js # Duplicate prevention (24h)
+│       └── image.js    # Pollinations AI
+├── posted-links.json  # Duplicate tracking (auto-generated)
 ├── package.json
 ├── docs/
 │   ├── index.html    # Dashboard
 │   └── history.json
 └── .github/workflows/
-    ├── cron.yml      # Pipeline
+    ├── cron.yml      # 15-min pipeline
     └── deploy.yml    # Pages deploy
 ```
 
@@ -80,4 +91,13 @@
 
 ---
 
-*State updated: 2026-04-22*
+*State updated: 2026-04-24*
+
+---
+
+## Decisions Made
+
+- **2026-04-24:** Changed from hourly Top 5 to 15-minute Top 1 with duplicate prevention
+  - World cron: `*/15 * * * *`, Tech cron: `7,22,37,52 * * * *`
+  - Duplicate prevention via posted-links.json (24h retention)
+  - Retry logic: 1 retry before fail with 2s delay
