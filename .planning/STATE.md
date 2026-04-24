@@ -95,9 +95,7 @@
 
 ---
 
-## Decisions Made
+## Roadmap Evolution
 
-- **2026-04-24:** Changed from hourly Top 5 to 15-minute Top 1 with duplicate prevention
-  - World cron: `*/15 * * * *`, Tech cron: `7,22,37,52 * * * *`
-  - Duplicate prevention via posted-links.json (24h retention)
-  - Retry logic: 1 retry before fail with 2s delay
+- **2026-04-24:** Phase 06 added: Improve content prompt for viral posts
+- **2026-04-24:** Phase 04 changes: 15-min cron, Top 1, duplicate prevention

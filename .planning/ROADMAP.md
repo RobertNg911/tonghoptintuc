@@ -48,6 +48,17 @@
 | 03-facebook | ✅ Complete | post.js |
 | 04-scheduling | ✅ Complete | 15-min cron, Top 1, duplicate prevention |
 | 05-ai-processing | ✅ Complete | Groq + Pollinations |
+| 06-content-prompt | ✅ Complete | Improved prompt: System + User, temp 0.85, 300-500 words |
+
+---
+
+## Phase 06: Content Prompt Optimization
+
+**Goal:** Chỉnh sửa prompt cho generate.js để tạo content viral, hấp dẫn và độc đáo hơn.
+
+**Depends on:** 05-ai-processing
+
+**Plans:** Not planned yet
 
 ---
 
@@ -121,6 +132,16 @@
 | Tech | `7,22,37,52 * * * *` | :07, :22, :37, :52 |
 
 *Offset 7 minutes between world and tech*
+
+### Phase 1: Improve content prompt for more engaging viral posts
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 0
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 1 to break down)
 
 ---
 
