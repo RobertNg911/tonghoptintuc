@@ -3,7 +3,8 @@ const https = require('https');
 const fs = require('fs');
 const { parseString } = require('xml2js');
 const { scoreAll } = require('./src/feeds/scorer');
-const { rankNews } = require('./src/feeds/ranker');
+const { rankNews, getTopNews } = require('./src/feeds/ranker');
+const { checkDuplicate } = require('./src/services/duplicate');
 
 const SOURCES = {
   world: [
@@ -81,13 +82,25 @@ async function fetchAll() {
     process.exit(1);
   }
 
-  // Score and rank news
+  // Score and rank news - select top 1 with hotScore >= 20
   const scored = scoreAll(items);
-  const hotNews = rankNews(scored, { top: 5 });
+  const topNews = getTopNews(scored, { top: 1, minScore: 20 });
   
-  fs.writeFileSync('news.json', JSON.stringify(hotNews, null, 2));
-  console.log(`✅ Ranked ${hotNews.length} hot items for ${CATEGORY}`);
-  hotNews.forEach((item, i) => {
+  if (topNews.length === 0) {
+    console.error('❌ No news meeting hotScore threshold (>= 20)');
+    process.exit(1);
+  }
+
+  // Check for duplicates
+  if (checkDuplicate(topNews[0].link)) {
+    console.log(`⚠️ Duplicate detected: ${topNews[0].title.substring(0, 50)}...`);
+    console.log('🔄 Skipping - will retry next run');
+    process.exit(1);
+  }
+
+  fs.writeFileSync('news.json', JSON.stringify(topNews, null, 2));
+  console.log(`✅ Ranked ${topNews.length} hot items for ${CATEGORY}`);
+  topNews.forEach((item, i) => {
     console.log(`  ${i+1}. [${item.hotScore}pts] ${item.source}: ${item.title.substring(0, 50)}...`);
   });
   process.exit(0);

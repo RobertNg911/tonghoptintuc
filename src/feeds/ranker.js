@@ -1,4 +1,4 @@
-const DEFAULT_TOP = 5;
+const DEFAULT_TOP = 1;
 const MIN_SCORE = 20;
 
 function rankNews(scoredItems, options = {}) {
@@ -10,6 +10,23 @@ function rankNews(scoredItems, options = {}) {
     .sort((a, b) => b.hotScore - a.hotScore);
 
   return sorted.slice(0, top);
+}
+
+/**
+ * Get top news items with configurable options
+ * @param {Array} scoredItems - Items with hotScore calculated
+ * @param {Object} options - { top: number, minScore: number }
+ * @returns {Array} - Top news items meeting threshold
+ */
+function getTopNews(scoredItems, options = {}) {
+  const top = options.top || DEFAULT_TOP;
+  const minScore = options.minScore || MIN_SCORE;
+
+  const valid = scoredItems
+    .filter(i => i.hotScore >= minScore)
+    .sort((a, b) => b.hotScore - a.hotScore);
+
+  return valid.slice(0, top);
 }
 
 function getHotNews(items, options = {}) {
@@ -47,4 +64,4 @@ function calculateScore(item) {
   return score;
 }
 
-module.exports = { rankNews, getHotNews, DEFAULT_TOP, MIN_SCORE };
+module.exports = { rankNews, getTopNews, getHotNews, DEFAULT_TOP, MIN_SCORE };
