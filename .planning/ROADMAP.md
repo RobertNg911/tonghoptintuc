@@ -1,9 +1,12 @@
 # TongHopTinTuc Roadmap
 
-## ⚠️ Project Changed - Now Uses GitHub Actions
+## ⚠️ Updated 2026-04-24
 
-> **Date**: 2026-04-22
-> Original plan was Cloudflare Workers + Hono. Now uses GitHub Actions + Node.js scripts.
+> **Changes from Phase 04:**
+> - 15-minute cron (world: `*/15`, tech: `7,22,37,52`)
+> - Top 1 news only (hotScore >= 20)
+> - Duplicate prevention via `posted-links.json`
+> - Retry logic (1 retry before fail)
 
 ---
 
@@ -12,24 +15,26 @@
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                  GitHub Actions                          │
-│  cron.yml: 0 * * * * (world), 30 * * * * (tech)       │
+│  world: */15 * * * * (0,15,30,45)                      │
+│  tech: 7,22,37,52 * * * *                              │
 └─────────────────────────────────────────────────────────┘
-                           │
-        ┌──────────────────┼──────────────────┐
-        ▼                  ▼                  ▼
+                            │
+         ┌──────────────────┼──────────────────┐
+         ▼                  ▼                  ▼
 ┌───────────────┐  ┌──────────────┐  ┌──────────────┐
 │ fetch-news.js │  │ generate.js  │  │ gen-image.js │
-│  RSS feeds   │  │  5 contents  │  │  5 images   │
+│  RSS feeds   │  │  1 content  │  │  1 image    │
 │ scorer.js    │  │  Groq AI    │  │ Pollinations │
 │ ranker.js    │  └──────────────┘  └──────────────┘
+│ duplicate.js│
 └───────────────┘
-                           │
-                           ▼
-                    ┌──────────────────────┐
-                    │   post.js × 5        │
-                    │   10 min apart       │
-                    │   Facebook scheduling│
-                    └──────────────────────┘
+                            │
+                            ▼
+                     ┌──────────────────────┐
+                     │      post.js          │
+                     │   1 post per run    │
+                     │   Facebook post     │
+                     └──────────────────────┘
 ```
 
 ---
@@ -41,7 +46,7 @@
 | 01-setup | ✅ Complete | GitHub Actions workflow |
 | 02-feed-collection | ✅ Complete | fetch-news.js |
 | 03-facebook | ✅ Complete | post.js |
-| 04-scheduling | ✅ Complete | cron.yml |
+| 04-scheduling | ✅ Complete | 15-min cron, Top 1, duplicate prevention |
 | 05-ai-processing | ✅ Complete | Groq + Pollinations |
 
 ---
@@ -51,15 +56,16 @@
 ### Core Scripts
 | File | Purpose |
 |------|---------|
-| `fetch-news.js` | Fetch RSS feeds |
-| `generate.js` | Generate content with Groq |
-| `gen-image.js` | Generate image with Pollinations |
-| `post.js` | Post to Facebook |
+| `fetch-news.js` | Fetch RSS → score → rank Top 1 → duplicate check |
+| `generate.js` | Generate 1 content with Groq (retry 1x) |
+| `gen-image.js` | Generate 1 image with Pollinations (retry 1x) |
+| `post.js` | Post to Facebook, mark as posted |
+| `src/services/duplicate.js` | Track posted links (24h) |
 
 ### GitHub Actions
 | File | Purpose |
 |------|---------|
-| `.github/workflows/cron.yml` | Hourly pipeline |
+| `.github/workflows/cron.yml` | 15-minute pipeline |
 | `.github/workflows/deploy.yml` | Deploy dashboard |
 
 ### Dashboard
@@ -77,19 +83,21 @@
 | `GROQ_API_KEY` | ✅ | AI for content + image prompt |
 | `FB_PAGE_ID` | ✅ | Facebook Page ID |
 | `FB_TOKEN` | ✅ | Facebook Access Token |
-| `TELEGRAM_BOT_TOKEN` | Optional | Telegram notifications |
-| `TELEGRAM_CHAT_ID` | Optional | Telegram chat ID |
+| `TELEGRAM_BOT_TOKEN` | ✅ | Failure notifications |
+| `TELEGRAM_CHAT_ID` | ✅ | Telegram chat ID |
 
 ---
 
 ## Features
 
 - ✅ Auto fetch RSS feeds (world + tech)
-- ✅ Score + rank top 5 hot news
-- ✅ Generate 5 contents with AI (Groq Llama 3.3)
-- ✅ Generate 5 images (Pollinations.ai)
-- ✅ Post 5 articles to Facebook (10 min apart)
-- ✅ Hourly cron (GitHub Actions)
+- ✅ Score + rank **Top 1** hot news (hotScore >= 20)
+- ✅ Generate **1 content** with AI (Groq Llama 3.3)
+- ✅ Generate **1 image** (Pollinations.ai)
+- ✅ Post **1 article** to Facebook per run
+- ✅ **15-minute cron** (GitHub Actions)
+- ✅ **Duplicate prevention** (`posted-links.json`, 24h retention)
+- ✅ **Retry logic** (1 retry before fail)
 - ✅ Telegram alerts on failure
 - ✅ Dashboard UI
 - ✅ Manual trigger from dashboard
@@ -102,9 +110,19 @@
 - `src/services/gemini.js` - Not used
 - `src/services/zimage.js` - Not used
 - `src/services/alert.js` - Not used
-- `src/feeds/scorer.js` - Not used
-- `src/feeds/ranker.js` - Not used
 
 ---
 
-*Updated: 2026-04-22*
+## Cron Schedule
+
+| Category | Schedule | Examples |
+|----------|----------|----------|
+| World | `*/15 * * * *` | :00, :15, :30, :45 |
+| Tech | `7,22,37,52 * * * *` | :07, :22, :37, :52 |
+
+*Offset 7 minutes between world and tech*
+
+---
+
+*Updated: 2026-04-24*
+*Phase 04 verified: passed (6/6 must-haves)*
