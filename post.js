@@ -2,6 +2,7 @@ const fs = require('fs');
 const axios = require('axios');
 const FormData = require('form-data');
 const path = require('path');
+const { checkDuplicate, markPosted } = require('./src/services/duplicate');
 
 const FB_PAGE_ID = process.env.FB_PAGE_ID;
 const FB_TOKEN = process.env.FB_TOKEN;
@@ -11,6 +12,29 @@ const SCHEDULED_MINUTES = parseInt(process.env.SCHEDULED_MINUTES) || 15;
 const SCHEDULE_INDEX = parseInt(process.env.SCHEDULE_INDEX) || 0;
 const IMAGE_FILE = process.env.IMAGE_FILE || `image-${SCHEDULE_INDEX + 1}.png`;
 const CONTENT_FILE = process.env.CONTENT_FILE || `content-${SCHEDULE_INDEX + 1}.txt`;
+
+async function sendAlert(step, message) {
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+    console.log('⚠️ Telegram not configured, skipping alert');
+    return;
+  }
+  
+  const alertMsg = `🚨 *TongHopTinTuc Alert*\n\n` +
+    `*Step:* ${step}\n` +
+    `*Error:* ${message}\n` +
+    `*Time:* ${new Date().toISOString()}\n\n` +
+    `*Retry suggestion:* Check GitHub Actions logs`;
+  
+  try {
+    await axios.post(
+      `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+      { chat_id: TELEGRAM_CHAT_ID, text: alertMsg, parse_mode: 'Markdown' }
+    );
+    console.log('✅ Alert sent to Telegram');
+  } catch (e) {
+    console.log('⚠️ Failed to send Telegram alert:', e.message);
+  }
+}
 
 async function sendTelegram(message) {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
@@ -94,6 +118,12 @@ async function post() {
       );
       imageId = response.data.id;
       console.log('✅ Done! Post with image. ID:', imageId);
+      
+      // Mark as posted to prevent duplicate
+      const newsData = JSON.parse(fs.readFileSync('news.json', 'utf8'));
+      if (newsData[0]) {
+        markPosted(newsData[0].link, newsData[0].title);
+      }
       process.exit(0);
     } catch (e) {
       console.log('⚠️ Image upload failed:', e.message);
@@ -123,17 +153,23 @@ async function post() {
       postData
     );
     console.log('✅ Done! Post ID:', response.data.id, `- ${contentFile}`);
+    
+    // Mark as posted to prevent duplicate
+    const newsData = JSON.parse(fs.readFileSync('news.json', 'utf8'));
+    if (newsData[0]) {
+      markPosted(newsData[0].link, newsData[0].title);
+    }
     process.exit(0);
   } catch (e) {
     console.error('❌ Facebook API Error:');
     if (e.response?.data) console.error(JSON.stringify(e.response.data));
-    await sendTelegram(`❌ TongHopTinTuc LỖI: ${e.message}`);
+    await sendAlert('post.js - Facebook API', e.message);
     process.exit(1);
   }
 }
 
 post().catch(async e => {
   console.error('❌ Fatal:', e.message);
-  await sendTelegram(`❌ TongHopTinTuc LỖI: ${e.message}`);
+  await sendAlert('post.js - Fatal', e.message);
   process.exit(1);
 });
