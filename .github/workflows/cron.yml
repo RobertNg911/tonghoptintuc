@@ -5,8 +5,10 @@ env:
 
 on:
   schedule:
-    - cron: '0 * * * *'
-    - cron: '30 * * * *'
+    # World news: every 15 minutes (0, 15, 30, 45)
+    - cron: '*/15 * * * *'
+    # Tech news: every 15 minutes offset by 7 (7, 22, 37, 52)
+    - cron: '7,22,37,52 * * * *'
   workflow_dispatch:
     inputs:
       category:
@@ -33,7 +35,8 @@ jobs:
       
       - name: Determine category
         run: |
-          if [ "${{ github.event.schedule }}" = "30 * * * *" ]; then
+          SCHEDULE_EXPR="${{ github.event.schedule }}"
+          if [[ "$SCHEDULE_EXPR" == "7,22,37,52 * * * *" ]]; then
             echo "CATEGORY=tech" >> $GITHUB_ENV
           else
             echo "CATEGORY=world" >> $GITHUB_ENV
@@ -43,66 +46,29 @@ jobs:
           fi
           echo "Running $CATEGORY pipeline..."
       
-      - name: Fetch and rank news
+      - name: Fetch and rank top 1 news
         run: node fetch-news.js
       
-      - name: Generate 5 contents
+      - name: Generate content
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          CONTENT_COUNT: 5
+          CONTENT_COUNT: 1
         run: |
           node generate.js
           echo "Content files:"
           ls -la content-*.txt 2>/dev/null || echo "No content files"
       
-      - name: Generate 5 images
+      - name: Generate image
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          IMAGE_COUNT: 5
+          IMAGE_COUNT: 1
         run: node gen-image.js
       
-      - name: Post 1 of 5
+      - name: Post to Facebook
         env:
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           FB_TOKEN: ${{ secrets.FB_TOKEN }}
-          SCHEDULE_INDEX: 0
           SCHEDULED_MINUTES: 0
-        run: node post.js
-        continue-on-error: true
-      
-      - name: Post 2 of 5
-        env:
-          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
-          FB_TOKEN: ${{ secrets.FB_TOKEN }}
-          SCHEDULE_INDEX: 1
-          SCHEDULED_MINUTES: 10
-        run: node post.js
-        continue-on-error: true
-      
-      - name: Post 3 of 5
-        env:
-          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
-          FB_TOKEN: ${{ secrets.FB_TOKEN }}
-          SCHEDULE_INDEX: 2
-          SCHEDULED_MINUTES: 20
-        run: node post.js
-        continue-on-error: true
-      
-      - name: Post 4 of 5
-        env:
-          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
-          FB_TOKEN: ${{ secrets.FB_TOKEN }}
-          SCHEDULE_INDEX: 3
-          SCHEDULED_MINUTES: 30
-        run: node post.js
-        continue-on-error: true
-      
-      - name: Post 5 of 5
-        env:
-          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
-          FB_TOKEN: ${{ secrets.FB_TOKEN }}
-          SCHEDULE_INDEX: 4
-          SCHEDULED_MINUTES: 40
         run: node post.js
         continue-on-error: true
 
