@@ -4,6 +4,20 @@ const { generateImage } = require('./src/services/image');
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const COUNT = parseInt(process.env.IMAGE_COUNT) || 5;
+const MAX_RETRIES = 1;
+
+async function generateWithRetry(prompt, attempt = 0) {
+  try {
+    return await generateImage(prompt);
+  } catch (e) {
+    if (attempt < MAX_RETRIES) {
+      console.log(`🔄 Retrying image generation... (${attempt + 1}/${MAX_RETRIES})`);
+      await new Promise(r => setTimeout(r, 2000));
+      return generateWithRetry(prompt, attempt + 1);
+    }
+    throw e;
+  }
+}
 
 async function genImagePrompt(content) {
   const prompt = `From the Facebook post below, create a short prompt (max 50 words) describing a visual image for illustration.
@@ -54,11 +68,11 @@ async function main() {
       const imagePrompt = await genImagePrompt(content);
       
       console.log(`🎨 [${i}/${COUNT}] Generating image...`);
-      const buf = await generateImage(imagePrompt);
+      const buf = await generateWithRetry(imagePrompt);
       fs.writeFileSync(imageFile, Buffer.from(buf));
       console.log(`✅ [${i}/${COUNT}] Done: ${imageFile}`);
     } catch (e) {
-      console.log(`❌ [${i}/${COUNT}] Failed: ${e.message}`);
+      console.log(`❌ [${i}/${COUNT}] Failed after ${MAX_RETRIES + 1} attempts: ${e.message}`);
     }
   }
   
