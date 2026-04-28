@@ -5,6 +5,46 @@ const HOT_KEYWORDS = [
   'Bitcoin', 'Crypto', 'USD', 'Fed', 'interest rate'
 ];
 
+// Source reliability weights (CORE-01b)
+const SOURCE_RELIABILITY = {
+  // Tier 1: High Reliability (+15)
+  'Reuters': 15,
+  'Reuters (Google RSS)': 15,
+  'AP News': 15,
+  'AP News (Google RSS)': 15,
+  'Bloomberg Markets': 15,
+  'Bloomberg Technology': 15,
+
+  // Tier 2: Major Outlets (+10)
+  'BBC World': 10,
+  'BBC': 10,
+  'NYTimes': 10,
+  'The New York Times': 10,
+  'Guardian World': 10,
+  'The Guardian': 10,
+  'WSJ': 10,
+  'WSJ (Google RSS)': 10,
+  'Washington Post': 10,
+
+  // Tier 3: Standard (+5)
+  'CNN World': 5,
+  'CNN': 5,
+  'Al Jazeera': 5,
+  'TechCrunch': 5,
+  'The Verge': 5,
+  'Wired': 5,
+  'Ars Technica': 5,
+  'Reddit r/worldnews': 5,
+  'Reddit r/technology': 5,
+  'Reddit r/news': 5,
+  'France24': 5,
+  'Euronews': 5,
+  'CBS News': 5,
+  'Fox News': 5,
+
+  // Tier 4: Others (0 - default)
+};
+
 const TOPIC_KEYWORDS = {
   tech: ['AI', 'GPT', 'tech', 'software', 'app', 'phone', 'computer'],
   world: ['trump', 'putin', 'biden', 'war', 'military', 'politics'],
@@ -39,7 +79,10 @@ function scoreItem(item) {
 
   if (item.summary?.length > 100) score += 5;
   if (/\d+/.test(titleLower)) score += 5;
-  if (item.source === 'BBC' || item.source === 'Reuters') score += 10;
+
+  // Source reliability weight (CORE-01b)
+  const sourceWeight = SOURCE_RELIABILITY[item.source] || 0;
+  score += sourceWeight;
 
   // Reddit-specific scoring (REDDIT-02 integration)
   if (item.category === 'reddit') {
