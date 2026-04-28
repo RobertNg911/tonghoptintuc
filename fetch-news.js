@@ -2,6 +2,8 @@ const http = require('http');
 const https = require('https');
 const fs = require('fs');
 const { parseString } = require('xml2js');
+const RSSParser = require('rss-parser');
+const parser = new RSSParser();
 const { scoreAll } = require('./src/feeds/scorer');
 const { rankNews, getTopNews } = require('./src/feeds/ranker');
 const { checkDuplicate } = require('./src/services/duplicate');
@@ -35,6 +37,13 @@ const SOURCES = {
     { name: 'Reddit r/worldnews', subreddit: 'worldnews' },
     { name: 'Reddit r/technology', subreddit: 'technology' },
     { name: 'Reddit r/news', subreddit: 'news' }
+  ],
+  financial: [
+    { name: 'Bloomberg Markets', url: 'https://feeds.bloomberg.com/markets/news.rss' },
+    { name: 'Bloomberg Technology', url: 'https://feeds.bloomberg.com/technology/news.rss' },
+    { name: 'Reuters (Google RSS)', url: 'https://news.google.com/rss/search?q=site:reuters.com&hl=en-US&gl=US&ceid=US:en' },
+    { name: 'AP News (Google RSS)', url: 'https://news.google.com/rss/search?q=site:apnews.com&hl=en-US&gl=US&ceid=US:en' },
+    { name: 'WSJ (Google RSS)', url: 'https://news.google.com/rss/search?q=site:wsj.com&hl=en-US&gl=US&ceid=US:en' }
   ]
 };
 
@@ -100,6 +109,32 @@ async function fetchAll() {
       console.log(`✅ Reddit: ${redditPosts.length} posts`);
     } catch (e) {
       console.error(`❌ Reddit failed: ${e.message}`);
+    }
+  }
+
+  // Fetch financial sources (Bloomberg, Reuters, AP, WSJ) using rss-parser
+  if (category === 'world' || category === 'financial') {
+    const financialSources = SOURCES.financial || [];
+    for (const source of financialSources) {
+      try {
+        console.log(`Fetching ${source.name}...`);
+        const feed = await parser.parseURL(source.url);
+        const entries = feed.items?.slice(0, 5) || [];
+
+        for (const item of entries) {
+          items.push({
+            title: item.title || '',
+            link: item.link || '',
+            pubDate: item.pubDate || item.isoDate || '',
+            source: source.name,
+            category: 'financial'
+          });
+        }
+        successCount++;
+        console.log(`✅ ${source.name}: ${entries.length} items`);
+      } catch (e) {
+        console.error(`❌ ${source.name} failed: ${e.message}`);
+      }
     }
   }
   
