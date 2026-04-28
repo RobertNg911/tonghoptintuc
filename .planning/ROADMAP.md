@@ -133,7 +133,11 @@
 
 **Depends on:** 07-facebook-engagement (optional - có thể song song)
 
-**Plans:** Not planned yet
+**Plans:** 2 plans
+
+**Plan list:**
+- [ ] 08-01-PLAN.md — Create Reddit fetch service with User-Agent and rate limiting
+- [ ] 08-02-PLAN.md — Integrate Reddit into fetch-news.js pipeline
 
 **Success Criteria:**
 1. Reddit posts được fetch thành công qua Reddit JSON API (https://www.reddit.com/r/{subreddit}/hot.json)
