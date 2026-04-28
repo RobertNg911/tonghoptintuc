@@ -1,12 +1,40 @@
 # TongHopTinTuc Roadmap
 
-## ⚠️ Updated 2026-04-24
+## ⚠️ Updated 2026-04-28
 
 > **Changes from Phase 04:**
 > - 15-minute cron (world: `*/15`, tech: `7,22,37,52`)
 > - Top 1 news only (hotScore >= 20)
 > - Duplicate prevention via `posted-links.json`
 > - Retry logic (1 retry before fail)
+>
+> **Milestone v1.1 Added:**
+> - Phase 08: Reddit Integration (REDDIT-01 to 04)
+> - Phase 09: RSS Sources - Bloomberg + Google Proxy (RSS-02, RSS-03)
+> - Phase 10: Scoring/Ranking Updates (CORE-01)
+
+---
+
+## Requirements Mapping (v1.1)
+
+| ID | Name | Description | Phase |
+|----|------|-------------|-------|
+| **Reddit Integration** | | | **08** |
+| REDDIT-01 | FetchRedditAPI | Fetch tin từ Reddit API | 08 |
+| REDDIT-02 | ParseRedditPost | Parse Reddit post structure | 08 |
+| REDDIT-03 | UserAgentHeader | Add User-Agent header | 08 |
+| REDDIT-04 | RateLimiting | Handle 60 req/min | 08 |
+| **RSS Sources** | | | **09** |
+| RSS-02a | BloombergRSS | Add Bloomberg RSS source | 09 |
+| RSS-02b | RSSParser | Use rss-parser library | 09 |
+| RSS-02c | BloombergIntegrate | Integrate into fetch-news.js | 09 |
+| RSS-03a | GoogleRSSReuters | Google RSS proxy for Reuters | 09 |
+| RSS-03b | GoogleRSSAP | Google RSS proxy for AP News | 09 |
+| RSS-03c | GoogleRSSWSJ | Google RSS proxy for WSJ | 09 |
+| **Scoring Updates** | | | **10** |
+| CORE-01a | RedditScore | Incorporate Reddit upvotes | 10 |
+| CORE-01b | SourceReliability | Add source reliability weights | 10 |
+| CORE-01c | RankingUpdate | Update ranking for mixed sources | 10 |
 
 ---
 
@@ -50,6 +78,69 @@
 | 05-ai-processing | ✅ Complete | Groq + Pollinations |
 | 06-content-prompt | ✅ Complete | Improved prompt: System + User, temp 0.85, 300-500 words |
 | 07-facebook-engagement | 📋 Pending | Strategies to increase Facebook engagement |
+| 08-reddit-integration | 📋 Pending | Reddit API integration (REDDIT-01 to 04) |
+| 09-rss-sources | 📋 Pending | Bloomberg + Google RSS proxy (RSS-02, RSS-03) |
+| 10-scoring-ranking | 📋 Pending | Update scoring for new sources (CORE-01) |
+
+---
+
+## Milestone v1.1: Thêm nguồn tin (Reddit, RSS mới)
+
+---
+
+## Phase 10: Scoring/Ranking Updates
+
+**Goal:** Cập nhật thuật toán scoring để xử lý tốt hơn các nguồn tin mới (Reddit, Bloomberg, Reuters, AP, WSJ).
+
+**Requirements:** CORE-01a, CORE-01b, CORE-01c
+
+**Depends on:** 08-reddit-integration, 09-rss-sources
+
+**Plans:** Not planned yet
+
+**Success Criteria:**
+1. Score được tính toán với các yếu tố mới (Reddit upvotes, source reliability)
+2. Ranking system ưu tiên nguồn chất lượng cao (Reuters, AP, BBC, Reddit hot posts)
+3. Tin từ Reddit và RSS mới được score chính xác và nhất quán
+4. hotScore >= 20 vẫn hoạt động tốt với nguồn mới
+
+---
+
+## Phase 09: Add RSS Sources (Bloomberg + Google Proxy)
+
+**Goal:** Thêm nguồn tin từ Bloomberg RSS và Google RSS proxy (Reuters, AP, WSJ) thông qua rss-parser.
+
+**Requirements:** RSS-02a, RSS-02b, RSS-02c, RSS-03a, RSS-03b, RSS-03c
+
+**Depends on:** 08-reddit-integration
+
+**Plans:** Not planned yet
+
+**Success Criteria:**
+1. Bloomberg RSS feed được fetch thành công với rss-parser
+2. Google RSS proxy hoạt động cho Reuters, AP, WSJ (3 sources)
+3. Tất cả nguồn mới được tích hợp vào pipeline fetch-news.js hiện tại
+4. Không có lỗi khi fetch đồng thời các nguồn cũ và mới
+5. RSS parsing nhất quán giữa các nguồn (title, link, pubDate, source)
+
+---
+
+## Phase 08: Add Reddit Integration
+
+**Goal:** Tích hợp Reddit API để lấy tin nóng từ Reddit (subreddits: worldnews, technology, news).
+
+**Requirements:** REDDIT-01, REDDIT-02, REDDIT-03, REDDIT-04
+
+**Depends on:** 07-facebook-engagement (optional - có thể song song)
+
+**Plans:** Not planned yet
+
+**Success Criteria:**
+1. Reddit posts được fetch thành công qua Reddit JSON API (https://www.reddit.com/r/{subreddit}/hot.json)
+2. Reddit post data được parse đúng cấu trúc (title, url, subreddit, score, num_comments, permalink)
+3. User-Agent header được thêm vào mọi Reddit request (theo Reddit API rules)
+4. Rate limiting 60 req/min được xử lý đúng (delay giữa các requests, không bị 429 error)
+5. Reddit posts được chuẩn hóa format giống RSS feeds để tích hợp vào pipeline
 
 ---
 
@@ -112,6 +203,7 @@
 
 ## Features
 
+### v1.0 (Current)
 - ✅ Auto fetch RSS feeds (world + tech)
 - ✅ Score + rank **Top 1** hot news (hotScore >= 20)
 - ✅ Generate **1 content** with AI (Groq Llama 3.3)
@@ -123,6 +215,20 @@
 - ✅ Telegram alerts on failure
 - ✅ Dashboard UI
 - ✅ Manual trigger from dashboard
+
+### v1.1 (Planning - Thêm nguồn tin)
+- 📋 Reddit integration (REDDIT-01 to REDDIT-04)
+  - Fetch Reddit hot posts via JSON API
+  - Parse Reddit post structure
+  - User-Agent header (Reddit API requirement)
+  - Rate limiting (60 req/min)
+- 📋 New RSS sources (RSS-02, RSS-03)
+  - Bloomberg RSS (rss-parser)
+  - Google RSS proxy: Reuters, AP, WSJ
+- 📋 Scoring updates (CORE-01)
+  - Reddit upvotes factor
+  - Source reliability weighting
+  - Updated ranking algorithm
 
 ---
 
@@ -144,17 +250,15 @@
 
 *Offset 7 minutes between world and tech*
 
-### Phase 1: Improve content prompt for more engaging viral posts
+---
 
-**Goal:** [To be planned]
-**Requirements**: TBD
-**Depends on:** Phase 0
-**Plans:** 0 plans
+## Roadmap Evolution
 
-Plans:
-- [ ] TBD (run /gsd-plan-phase 1 to break down)
+- **2026-04-28:** Milestone v1.1 added - Phases 08, 09, 10 (Reddit, RSS, Scoring)
+- **2026-04-24:** Phase 06 added: Improve content prompt for viral posts
+- **2026-04-24:** Phase 04 changes: 15-min cron, Top 1, duplicate prevention
 
 ---
 
-*Updated: 2026-04-24*
-*Phase 04 verified: passed (6/6 must-haves)*
+*Updated: 2026-04-28*
+*Milestone v1.1 planned: Reddit + RSS sources + Scoring updates*
