@@ -1,231 +1,370 @@
-# Technology Stack
+# Technology Stack - New News Sources
 
-**Project:** TongHopTinTuc — News Aggregator with Auto-Post to Facebook
-**Researched:** 2026-04-12
-**Focus:** Free, lightweight, Cloudflare Workers compatible
+**Project:** TongHopTinTuc v1.1
+**Researched:** 2026-04-28
+**Confidence:** HIGH
 
----
+## Executive Summary
 
-## Recommended Stack
+For adding Reddit, X/Twitter, Reuters, AP, Bloomberg, and WSJ as news sources:
 
-### Core Runtime
+| Source | Method | Free? | Notes |
+|--------|--------|-------|-------|
+| **Reddit** | JSON endpoint | YES (dev only) | Public API for reads |
+| **X/Twitter** | API v2 | ❌ NO | Pay-per-use only, minimum $100/mo |
+| **Reuters** | Google News RSS | YES | Proxy feed, no official RSS |
+| **AP** | NewsAPI.org or Google RSS | YES (100req/d) | Limited free tier |
+| **Bloomberg** | Direct RSS feed | YES | feeds.bloomberg.com |
+| **WSJ** | Google News RSS | YES | Proxy feed |
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| **Cloudflare Workers** | Latest | Serverless runtime (free tier: 100K req/day) | Free, fast, edge-based — ideal for hourly cron jobs |
-| **Hono** | ^4.x | Web framework | Lightweight (~14KB), Works with Cloudflare Workers out of the box, built-in middleware for KV, D1, etc. |
-
-**Why Hono over Fastify?**
-- Fastify targets Node.js; Hono is designed for edge/serverless from day one
-- Hono works natively with Cloudflare environment (KV, Durable Objects)
-- Smaller bundle size (~14KB vs 200KB+)
-
-### RSS/Feed Parsing
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| **@extractus/feed-extractor** | ^7.x | Parse RSS/Atom/JSON feeds | Actively maintained (2025), simple API, 4 dependencies |
-| **Alternative: feedparser** | ^2.3.x | Classic parser | 26.7K weekly downloads, but 9 dependencies |
-
-**Why @extractus/feed-extractor?**
-- Fewer dependencies = smaller bundle for Workers
-- Actively maintained in 2024-2025
-- Simple `extract()` API for async parsing
-
-**Avoid:** `feedparser-rs` (Rust-based) — may need extra config for Workers
-
-### HTTP Client
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| **Built-in fetch** | Native (Workers) | HTTP requests | Built into Workers Runtime — no npm package needed |
-
-No external HTTP library needed. Cloudflare Workers includes `fetch` globally.
-
-### AI Text Generation
-
-| Technology | Option | Free Tier | Cost After Free |
-|------------|--------|---------|------------|--------------|
-| **Google Gemini 2.5 Flash** | via Google AI Studio | 500 req/day (generous) | ~$0.02/1M tokens (input) |
-| **OpenRouter** | gpt-4o-mini via OpenRouter | ~50 credits on signup | ~$0.15/1M tokens |
-| **OpenAI GPT-4o mini** | Direct API | None (paid from start) | $0.15/1M tokens input |
-
-**Recommendation:** **Google Gemini 2.5 Flash** via Google AI Studio
-
-**Why:**
-- Genuine free tier (500 requests/day as of April 2026) — verify on Google AI Studio docs
-- Good enough for short news summarization
-- No credit card required
-- Simple REST API with JSON response
-
-**Alternative:** Use OpenRouter as aggregator for model switching
-
-### AI Image Generation
-
-| Technology | Free Tier | Best For |
-|------------|----------|---------|
-| **ZSky AI** | 25 credits on signup | Quick prototyping |
-| **Leonardo AI** | ~150 tokens/day (10-30 images) | Quality with style control |
-| **Microsoft Designer** | 15 fast + unlimited slow | Occasional use |
-
-**Recommendation:** **Leonardo API** or **ZSky AI**
-
-**Why:**
-- Leonardo: Good free tier for testing, better output quality than other free options
-- ZSky AI: Simple API, 25 free credits on signup
-- Both have REST APIs compatible with Workers
-
-**Truth about "free" image APIs in 2026:**
-- OpenAI DALL-E: Paid only ($0.04-0.08/image)
-- Stable Diffusion via Replicate: Pay-per-use (~$0.003-0.02/image)
-- Most "free tiers" are limited trials, not production-ready
-
-**Strategy:** Start with free tier to test, budget for paid usage when volume increases
-
-### Facebook Posting
-
-| Technology | Method | Why |
-|------------|--------|-----|
-| **Facebook Graph API** | Direct REST calls | Official, stable, no library needed |
-| `fetch()` to `https://graph.facebook.com/v25.0/{page_id}/feed` | POST with message + access_token |
-
-**Why direct fetch over SDK:**
-- No npm dependency needed for simple posting
-- Lightweight Workers bundle
-- Graph API v25.0 is current (February 2026)
-
-**Required Permissions:**
-- `pages_manage_posts`
-- `pages_read_engagement`
-- Use **Page Access Token** (not user token)
-
-### Scheduling
-
-| Technology | Free Tier | Why |
-|------------|----------|-----|
-| **Cloudflare Cron Triggers** | 5 triggers, included free | Native to Workers |
-| **cron-job.org** | Free for external HTTP calls | Alternative if Workers can't run directly |
-
-**Recommended:** **Cloudflare Cron Triggers**
-
-**Configuration:**
-```
-# wrangler.toml
-[triggers]
-crons = ["0 * * * *"]  # Every hour at minute 0
-```
-
-**Why:**
-- Built into Workers, no external service needed
-- Free tier: 5 triggers (we only need 1)
-- 100K requests/day on free tier
+**Critical blocker:** X/Twitter API is NOT free. Will need alternative approach (third-party aggregator or scraping).
 
 ---
 
-## Installation
+## Source-by-Source Stack
+
+### 1. Reddit
+
+**API:** Reddit JSON API (public endpoints)
+**Base URL:** `https://www.reddit.com/r/{subreddit}/{sort}.json`
+
+| Subreddit | Endpoint | Purpose |
+|-----------|----------|---------|
+| r/worldnews | `/hot.json` | World news |
+| r/technology | `/hot.json` | Tech news |
+| r/news | `/hot.json` | General news |
+
+**Authentication:** None required for read-only (GET requests)
+
+**Rate Limits:** ~60 requests/minute (unauthenticated), higher with OAuth
+
+**Code Example:**
+
+```javascript
+// fetch-reddit.js
+const axios = require('axios');
+
+async function fetchReddit(subreddit = 'worldnews', limit = 10) {
+  const response = await axios.get(
+    `https://www.reddit.com/r/${subreddit}/hot.json?limit=${limit}`,
+    {
+      headers: {
+        'User-Agent': 'TongHopTinTuc/1.0 (news aggregator)'
+      }
+    }
+  );
+  
+  return response.data.data.children.map(post => ({
+    id: post.data.id,
+    title: post.data.title,
+    url: post.data.url,
+    permalink: `https://reddit.com${post.data.permalink}`,
+    score: post.data.score,
+    numComments: post.data.num_comments,
+    created: post.data.created_utc,
+    isSelf: post.data.is_self,
+    selfText: post.data.selftext
+  }));
+}
+```
+
+**npm install:**
+```bash
+npm install axios
+```
+
+**Sources:**
+- Reddit API Documentation: https://www.reddit.com/dev/
+- Reddit Data API Wiki: https://support.reddithelp.com/hc/en-us/articles/16160319875092-Reddit-Data-API-Wiki
+
+---
+
+### 2. X/Twitter
+
+**Status:** NOT FREE - Critical blocker
+
+**API:** X API v2 (Pay-per-use)
+**Pricing:** Credit-based, no free tier
+- Starts ~$100/month minimum for meaningful usage
+- Owned Reads: $0.001/resource
+- Tweets Read: $0.005/result
+
+**Not recommended** for 0đ/month budget.
+
+**Alternatives to investigate:**
+1. Nitter (Twitter frontend with RSS) - May be blocked
+2. Third-party aggregators (TweetDeck deprecated)
+3. Manual curation
+4. Check if any free tier still exists (rare)
+
+**Recommendation:** Skip X/Twitter for now, focus on other free sources.
+
+---
+
+### 3. Reuters
+
+**Method:** Google News RSS Proxy (official RSS discontinued)
+
+**RSS URLs:**
+
+| Feed | URL |
+|------|-----|
+| World News | `https://news.google.com/rss/search?q=when:24h+allinurl:reuters.com&ceid=US:en&hl=en-US&gl=US` |
+| Business | `https://news.google.com/rss/search?q=when:24h+allinurl:reuters.com&topic=b` |
+| Markets | `https://news.google.com/rss/search?q=when:24h+allinurl:reuters.com&topic=bc` |
+
+**Code Example:**
+
+```javascript
+// fetch-reuters-rss.js
+const Parser = require('rss-parser');
+const parser = new Parser();
+
+async function fetchReuters(feed = 'world') {
+  const feeds = {
+    world: '...reuters-world-rss-url...',
+    business: '...reuters-business-rss-url...'
+  };
+  
+  const parsed = await parser.parseURL(feeds[feed]);
+  return parsed.items.map(item => ({
+    title: item.title,
+    link: item.link,
+    pubDate: item.pubDate,
+    content: item.content
+  }));
+}
+```
+
+**npm install:**
+```bash
+npm install rss-parser
+```
+
+**Notes:** Reuters official RSS was discontinued ~2023. Use Google News proxy for live access.
+
+---
+
+### 4. AP (Associated Press)
+
+**Method:** AP News RSS Feeds
+
+**RSS URLs:**
+
+| Feed | URL |
+|------|-----|
+| Top News | `https://apnews.com/hub/apf-topnews?output=rss&p=16` |
+| Politics | `https://apnews.com/politics?output=rss` |
+| Business | `https://apnews.com/hub/business?output=rss` |
+
+**Alternative:** NewsAPI.org (100 req/day free tier, dev only)
+
+**Code Example:**
+
+```javascript
+// fetch-ap-rss.js
+const Parser = require('rss-parser');
+const parser = new Parser();
+
+async function fetchAP(category = 'topnews') {
+  const feeds = {
+    topnews: 'https://apnews.com/hub/apf-topnews?output=rss&p=16',
+    politics: 'https://apnews.com/politics?output=rss',
+    business: 'https://apnews.com/hub/business?output=rss'
+  };
+  
+  const parsed = await parser.parseURL(feeds[category]);
+  return parsed.items.map(item => ({
+    title: item.title,
+    link: item.link,
+    pubDate: item.pubDate
+  }));
+}
+```
+
+---
+
+### 5. Bloomberg
+
+**Method:** Direct RSS Feeds (OFFICIAL)
+
+**RSS URLs:**
+
+| Feed | URL |
+|------|-----|
+| Markets | `https://feeds.bloomberg.com/markets/news.rss` |
+| Technology | `https://feeds.bloomberg.com/technology/news.rss` |
+| Politics | `https://feeds.bloomberg.com/politics/news.rss` |
+| Wealth | `https://feeds.bloomberg.com/wealth/news.rss` |
+| Business | `https://feeds.bloomberg.com/bview/news.rss` |
+| Economics | `https://feeds.bloomberg.com/economics/news.rss` |
+
+**Authentication:** None (public)
+
+**Rate Limits:** None documented for RSS
+
+**Code Example:**
+
+```javascript
+// fetch-bloomberg-rss.js
+const Parser = require('rss-parser');
+const parser = new Parser();
+
+async function fetchBloomberg(category = 'markets') {
+  const feedUrl = `https://feeds.bloomberg.com/${category}/news.rss`;
+  const parsed = await parser.parseURL(feedUrl);
+  
+  return parsed.items.map(item => ({
+    title: item.title,
+    link: item.link,
+    pubDate: item.pubDate
+  }));
+}
+```
+
+---
+
+### 6. WSJ (Wall Street Journal)
+
+**Method:** Google News RSS Proxy
+
+**RSS URLs:**
+
+| Feed | URL |
+|------|-----|
+| World | `https://news.google.com/rss/search?q=when:24h+allinurl:wsj.com&ceid=US:en` |
+| Business | `https://news.google.com/rss/search?q=when:24h+allinurl:wsj.com/articles/SB` |
+| Markets | `https://news.google.com/rss/search?q=when:24h+allinurl:wsj.com/articles/markets` |
+
+**Official API:** Dow Jones Investor Select API (PAID, contact sales)
+
+**Note:** Most WSJ content is paywalled. Google News RSS returns headlines but may link to paywalled articles.
+
+---
+
+## Recommended Stack Additions
+
+### Packages to Install
 
 ```bash
-# Create Worker project
-npm create cloudflare@latest tonghop-tintuc --type=hono --ts
+npm install rss-parser axios
+```
 
-# Install dependencies
-npm install @extractus/feed-extractor
+| Package | Version | Purpose | Why |
+|---------|---------|---------|-----|
+| `rss-parser` | ^3.x | Parse RSS feeds | Cross-source RSS, same interface |
+| `axios` | ^1.x | HTTP client | Already in use |
 
-# No additional packages needed:
-# - Hono: built into template
-# - fetch: built into Workers Runtime
-# - crypto.randomUUID: built into Workers
+### No New API Keys Needed
+
+- Reddit: No auth for GET requests (development)
+- Reuters/AP/WSJ: Use RSS feeds
+- Bloomberg: Official RSS (free)
+- X/Twitter: SKIP (not free)
+
+### Environment Variables (none new)
+
+All RSS feeds are public. No API keys required.
+
+---
+
+## Implementation Pattern
+
+```javascript
+// src/feeds/reddit.js
+const axios = require('axios');
+
+const SUBREDDITS = {
+  worldnews: 'worldnews',
+  technology: 'technology',
+  news: 'news'
+};
+
+async function fetchReddit(subreddit = 'worldnews') {
+  const url = `https://www.reddit.com/r/${subreddit}/hot.json?limit=25`;
+  const { data } = await axios.get(url, {
+    headers: { 'User-Agent': 'TongHopTinTuc/1.0' }
+  });
+  
+  return data.data.children
+    .filter(p => !p.data.is_self || p.data.selftext?.length > 100)
+    .map(p => ({
+      source: 'reddit',
+      subreddit: `r/${subreddit}`,
+      title: p.data.title,
+      url: p.data.url,
+      permalink: `https://reddit.com${p.data.permalink}`,
+      score: p.data.score,
+      comments: p.data.num_comments,
+      published: new Date(p.data.created_utc * 1000).toISOString()
+    }));
+}
+```
+
+```javascript
+// src/feeds/rss-bundled.js
+const Parser = require('rss-parser');
+
+const FEEDS = {
+  reuters: 'https://news.google.com/rss/search?q=when:24h+allinurl:reuters.com&ceid=US:en',
+  ap: 'https://apnews.com/hub/apf-topnews?output=rss&p=16',
+  bloomberg: 'https://feeds.bloomberg.com/markets/news.rss',
+  wsj: 'https://news.google.com/rss/search?q=when:24h+allinurl:wsj.com&ceid=US:en'
+};
+
+async function fetchRSS(source) {
+  const parser = new Parser();
+  const feed = await parser.parseURL(FEEDS[source]);
+  return feed.items.map(item => ({
+    source,
+    title: item.title,
+    url: item.link,
+    published: item.pubDate
+  }));
+}
 ```
 
 ---
 
-## Recommended wrangler.toml
+## Rate Limits Summary
 
-```toml
-name = "tonghop-tintuc"
-main = "src/index.ts"
-compatibility_date = "2026-04-12"
-compatibility_flags = ["nodejs_compat"]
-
-[triggers]
-crons = ["0 * * * *"]  # Run every hour
-```
-
----
-
-## What NOT to Use and Why
-
-| Library/Service | Avoid Because |
-|---------------|-------------|
-| **Puppeteer/Playwright** | Too heavy for Workers (10MB+), use fetch + feed parser instead |
-| **Cheerio** | DOM parser not needed for feed XML; feed parser handles it |
-| **Fastify** | Designed for Node.js; Hono is edge-native |
-| **Express** | Same as Fastify — not edge-optimized |
-| **Facebook SDK (@noyoncodeware/fb)** | Unmaintained since 2024, 6 dependencies; direct fetch is simpler |
-| **cron-job.org** (external) | Cloudflare Cron is free and native |
-| **Database (PostgreSQL, MongoDB)** | Not needed per requirements — just post and forget |
+| Source | Rate Limit | Free? | Notes |
+|--------|-----------|-------|-------|
+| Reddit | ~60/min | Yes (dev) | Public API, no auth needed |
+| X/Twitter | Pay-per-use | ❌ | No free tier exists |
+| Reuters (via Google) | ? | Yes | Google News RSS proxy |
+| AP RSS | ? | Yes | Public RSS |
+| Bloomberg RSS | None | Yes | Official feeds |
+| WSJ (Google) | ? | Yes | Google News RSS proxy |
 
 ---
 
-## Free Tier Summary
+## What NOT to Use
 
-| Service | Free Limit | Notes |
-|---------|------------|-------|
-| Cloudflare Workers | 100K req/day, 10ms CPU | Cron triggers included |
-| Google AI Studio (Gemini 2.5 Flash) | 500 req/day | No credit card |
-| Leonardo AI | ~150 tokens/day | ~10-30 images |
-| Facebook Graph API | Unlimited posts | WithPage Access Token |
-| Cloudflare Cron Triggers | 5 triggers | Built into Workers |
-| ZSky AI | 25 credits | On signup |
+1. **X/Twitter API** - Not free, pay-per-use only, $100+/month minimum
+2. **NewsAPI.org** - Free tier has 24h article delay, only works on localhost (dev only), not for production
+3. **Dow Jones API** - Paid, enterprise only
+4. **Refinitiv/Bloomberg Terminal** - Expensive enterprise tier
 
 ---
 
-## Architecture Diagram
+## Next Steps
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│         Cloudflare Worker (Cron: 0 * * * *)             │
-│  ┌─────────────────────────────────────────────┐   │
-│  │ 1. Fetch RSS feeds (multiple sources)       │   │
-│  │ 2. Parse with @extractus/feed-extractor  │   │
-│  │ 3. Select new/fresh item               │   │
-│  │ 4. Call AI (Gemini 2.5 Flash)       │   │
-│  │    → Summarize to short post             │   │
-│  │ 5. Call AI (generate image prompt)     │   │
-│  │ 6. Call Image API (Leonardo/ZSky)     │   │
-│  │    → Generate image                │   │
-│  │ 7. POST to Facebook Graph API    │   │
-│  │    → {page_id}/feed           │   │
-│  └─────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-```
+1. Install `rss-parser`
+2. Create `src/feeds/reddit.js`
+3. Create `src/feeds/rss-newssources.js` for Reuters/AP/WSJ via Google RSS
+4. Add Bloomberg RSS to existing RSS fetcher
+5. Update scorer to handle Reddit post structure (score, comments instead of pubDate)
+6. Test all feeds independently
 
 ---
 
-## Source Verification
+## Sources
 
-- **Cloudflare Workers Cron Triggers**: [Official Docs - Cron Triggers](https://developers.cloudflare.com/workers/configuration/cron-triggers/) (2026-03-20)
-- **Cloudflare Node.js Compatibility**: [Node.js APIs in Workers](https://developers.cloudflare.com/workers/runtime-apis/nodejs/) (2026-02-02)
-- **Gemini 2.5 Flash Free Tier**: [Google AI Studio](https://aistudio.google.com/app/apikey) — 500 req/day (verify on signup)
-- **Facebook Graph API v25.0**: [ Page Post docs](https://developers.facebook.com/docs/graph-api/reference/page-post/) — Current version
-- **@extractus/feed-extractor**: [npm registry](https://www.npmjs.com/package/@extractus/feed-extractor) — v7.1.7 (Sep 2025)
-- **Hono**: [npm](https://www.npmjs.com/package/hono) — v4.x (2025)
-- **Leonardo AI Free Tier**: [leonardo.ai/pricing](https://leonardo.ai/pricing) — ~150 tokens/day
-
----
-
-## Confidence Assessment
-
-| Area | Confidence | Reason |
-|------|------------|--------|
-| Cloudflare Workers | HIGH | Official docs verified, current |
-| Hono | HIGH | Standard for edge, npm verified |
-| RSS Parsing | HIGH | @extractus actively maintained |
-| AI Text (Gemini) | MEDIUM | Free tier limits may change, verify on signup |
-| AI Image | MEDIUM | Free tiers are limited trials; expect to pay |
-| Facebook API | HIGH | Official docs, v25.0 current |
-| Cron Triggers | HIGH | Built into Workers, stable |
-
-**Flags:**
-- AI image generation free tiers change often — budget for paid usage
-- Gemini free tier verified April 2026 but may change — check on signup
+- Reddit API: https://www.reddit.com/dev/
+- Reddit Data API Wiki: https://support.reddithelp.com/hc/en-us/articles/16160319875092-Reddit-Data-API-Wiki
+- X Developer: https://developer.x.com/
+- Google News RSS: https://news.google.com/rss
+- Bloomberg RSS: https://feeds.bloomberg.com/
+- AP News: https://apnews.com/
+- NewsAPI Pricing: https://newsapi.org/pricing

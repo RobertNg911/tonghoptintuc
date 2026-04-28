@@ -1,514 +1,368 @@
-# Architecture Patterns
+# Architecture Patterns — Adding New News Sources
 
-**Project:** TongHopTinTuc - News Aggregator with Auto-Post to Facebook
-**Domain:** Automated content pipeline (RSS → AI → Facebook)
-**Researched:** 2026-04-12
+**Domain:** News aggregation from Reddit, X/Twitter, Reuters, AP, Bloomberg, WSJ  
+**Researched:** 2026-04-28  
+**Confidence:** MEDIUM-HIGH (mix of official docs and community findings)
 
-## Recommended Architecture
+---
 
-### Overview
+## Current Architecture Analysis
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                      TONGHOP TINTUC PIPELINE                           │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐          │
-│  │   Scheduler  │────▶│   Worker   │────▶│  Facebook   │          │
-│  │  (cron.org)  │     │  (Cloudflare)│     │  Graph API │          │
-│  └──────────────┘     └──────────────┘     └──────────────┘          │
-│                              │                                        │
-│                              ▼                                        │
-│                       ┌──────────────┐                              │
-│                       │     AI      │                              │
-│                       │  (OpenAI)   │                              │
-│                       └──────────────┘                              │
-│                              │                                        │
-│                              ▼                                        │
-│                       ┌──────────────┐                              │
-│                       │    RSS      │                              │
-│                       │   Feeds     │                              │
-│                       └──────────────┘                              │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-### Component Architecture (Single Worker)
-
-For this project's constraints (0đ budget, no database), a **single monolithic Worker** is the recommended approach. Complexity doesn't warrant splitting into multiple Workers.
+### Existing Data Flow
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     ORCHESTRATOR WORKER                          │
-│                    (src/index.ts)                              │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  export default {                                                │
-│    async fetch(request, env) {                                  │
-│      // Route: /health, /run, /test                               │
-│    },                                                           │
-│                                                                 │
-│    async scheduled(controller, env) {                           │
-│      // Cron trigger handler                                     │
-│    }                                                            │
-│  }                                                              │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-         │
-         ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      HANDLER LAYERS                             │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
-│  │  Scheduler  │  │   Router    │  │  Response   │             │
-│  │   Handler   │  │   (Hono)    │  │   Builder   │             │
-│  └──────┬──────┘  └─────────────┘  └─────────────┘             │
-│         │                                                       │
-│         ▼                                                       │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │                   PIPELINE ORCHESTRATOR                   │   │
-│  │                                                         │   │
-│  │   fetchFeeds()                                            │   │
-│  │       │                                                   │   │
-│  │       ▼                                                   │   │
-│  │   normalize()  ──▶ parse title, summary, link, image    │   │
-│  │       │                                                   │   │
-│  │       ▼                                                   │   │
-│  │   deduplicate() ──▶ check title similarity             │   │
-│  │       │                                                   │   │
-│  │       ▼                                                   │   │
-│  │   rewrite()  ────▶ AI content transformation           │   │
-│  │       │                                                   │   │
-│  │       ▼                                                   │   │
-│  │   generateImage() ─▶ AI image (optional)             │   │
-│  │       │                                                   │   │
-│  │       ▼                                                   │   │
-│  │   post()  ───────▶ Facebook Graph API                 │   │
-│  │                                                         │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-└───────��─────────────────────────────────────────────────────────┘
+GitHub Actions Cron (every 15 min)
+    ↓
+fetch-news.js (RSS → parse → score → rank → deduplicate)
+    ↓
+generate.js (AI rewrite with Groq Llama 3.3)
+    ↓
+gen-image.js (AI image with Pollinations.ai)
+    ↓
+post.js (Facebook Graph API + markPosted)
+    ↓
+posted-links.json (24h dedup tracking)
 ```
 
-### Data Flow
+### Key Integration Points
 
-```
-Hour 0: Cron Trigger Fires
-     │
-     ▼
-┌──────────────────────────────────────────────────────────────────┐
-│ STEP 1: Feed Fetching                                              │
-│                                                                  │
-│ fetchFeeds(sources: Feed[])                                        │
-│     │                                                             │
-│     ▼                                                             │
-│ { sources: ['hnrss', 'bbc', 'reuters', ...] }                    │
-│     │                                                             │
-│     ▼                                                             │
-│ HTTP GET to each RSS URL                                           │
-│     │                                                             │
-│     ▼                                                             │
-│ Response: XML/Atom/JSON ──▶ Parse with fast-xml-parser             │
-│     │                                                             │
-│     ▼                                                             │
-│ [Article { title, summary, link, image, date, source }]            │
-└──────────────────────────────────────────────────────────────────┘
-     │
-     ▼
-┌──────────────────────────────────────────────────────────────────┐
-│ STEP 2: Content Selection                                         │
-│                                                                  │
-│ selectBestArticle(articles: Article[])                            │
-│     │                                                             │
-│     ▼                                                             │
-│ Score each article:                                              │
-│   - Priority source bonus (+3)                                    │
-│   - Recency bonus (+2)                                             │
-│   - Remove duplicates (title similarity > 80%)                  │
-│     │                                                             │
-│     ▼                                                             │
-│ Best Article: { title, summary, link, image, source }               │
-└──────────────────────────────────────────────────────────────────┘
-     │
-     ▼
-┌──────────────────────────────────────────────────────────────────┐
-│ STEP 3: AI Transformation                                          │
-│                                                                  │
-│ rewriteWithAI(article: Article)                                   │
-│     │                                                             │
-│     ▼                                                             │
-│ Prompt: "Rewrite as engaging Vietnamese social post..."             │
-│     │                                                             │
-│     ▼                                                             │
-│ POST https://api.openai.com/v1/chat/completions                    │
-│     │                                                             │
-│     │  {                                                          │
-│     │    model: "gpt-4o-mini",                                      │
-│     │    messages: [                                               │
-│     │      { role: "system", content: "Bạn là chuyên gia..." },     │
-│     │      { role: "user", content: article.summary }               │
-│     │    ]                                                        │
-│     │  }                                                          │
-│     │                                                             │
-│     ▼                                                             │
-│ Response: { rewritten: "📰 [Title]\n\n[Summary]..." }           │
-└──────────────────────────────────────────────────────────────────┘
-     │
-     ▼ Optional (costly)
-┌──────────────────────────────────────────────────────────────────┐
-│ STEP 4: Image Generation                                          │
-│                                                                  │
-│ generateImage(prompt: string)                                    │
-│     │                                                             │
-│     ▼                                                             │
-│ POST https://api.openai.com/v1/images/generations               │
-│     │                                                             │
-│     │  {                                                          │
-│     │    model: "dall-e-3",                                       │
-│     │    prompt: prompt,                                          │
-│     │    size: "1024x1024"                                        │
-│     │  }                                                          │
-│     │                                                             │
-│     ▼                                                             │
-│ Response: { data: [ { url: "https://..." } ] }                    │
-│     │                                                             │
-│     ▼                                                             │
-│ Download image ──▶ Upload to temporary hosting                   │
-│ (or skip this step for cost savings)                               │
-└──────────────────────────────────────────────────────────────────┘
-     │
-     ▼
-┌──────────────────────────────────────────────────────────────────┐
-│ STEP 5: Facebook Posting                                           │
-│                                                                  │
-│ postToFacebook(content: PostContent)                              │
-│     │                                                             │
-│     ▼                                                             │
-│ POST https://graph.facebook.com/v25.0/{PAGE_ID}/feed               │
-│     │                                                             │
-│     │  {                                                          │
-│     │    message: "📰 Tin nóng...\n\n🔗 link",                   │
-│     │    link: article.link,                                       │
-│     │    access_token: env.FACEBOOK_PAGE_TOKEN                       │
-│     │  }                                                          │
-│     │                                                             │
-│     ▼                                                             │
-│ Response: { id: "post_id", success: true }                         │
-│     │                                                             │
-│     ▼                                                             │
-│ Log post_id for debugging                                         │
-└──────────────────────────────────────────────────────────────────┘
-     │
-     ▼
-DONE - Wait for next cron (1 hour later)
-```
+| Component | File | What Changes |
+|-----------|------|--------------|
+| **Source Config** | `fetch-news.js` → `SOURCES` object | Add new source URLs/API configs |
+| **Fetch Logic** | `fetch-news.js` → `fetchFeed()` | Extend to handle APIs (Reddit, X) not just RSS |
+| **Scoring** | `src/feeds/scorer.js` | Add new source names for score bonuses |
+| **Ranking** | `src/feeds/ranker.js` | No changes needed (generic) |
+| **Deduplication** | `src/services/duplicate.js` | No changes needed (URL-based) |
 
-## Component Boundaries
+---
 
-| Component | Responsibility | Input | Output | Communicates With |
-|-----------|---------------|-------|-------|------------------|
-| **Scheduler** | Trigger pipeline hourly | Cron expression | HTTP request to Worker | Worker (/run endpoint) |
-| **Fetcher** | Fetch and parse RSS feeds | Feed URLs | Article[] | External RSS sources |
-| **Selector** | Choose best content | Article[] | Single Article | Deduplication logic |
-| **Rewriter** | AI rewrite content | Article | Rewritten Post | OpenAI API |
-| **Generator** | AI generate image | Prompt | Image URL | OpenAI API (DALL-E) |
-| **Publisher** | Post to Facebook | Post Content | Post ID | Facebook Graph API |
-| **Config** | Manage sources | env vars | Feed config | All components |
+## New Source Integration Patterns
 
-### Environment Variables (Bindings)
+### 1. Reddit (API-based)
 
-```typescript
-interface Env {
-  // Feed Sources (JSON array)
-  FEED_SOURCES: string;
+**Integration Approach:** New fetcher function, not RSS
+
+```javascript
+// Add to fetch-news.js
+const Snoowrap = require('snoowrap');
+
+const REDDIT_SOURCES = {
+  reddit: [
+    { name: 'Reddit WorldNews', subreddit: 'worldnews', type: 'subreddit' },
+    { name: 'Reddit Technology', subreddit: 'technology', type: 'subreddit' },
+    { name: 'Reddit News', subreddit: 'news', type: 'subreddit' }
+  ]
+};
+
+// New fetcher for Reddit API
+async function fetchReddit(subreddit, sort = 'hot', limit = 10) {
+  const r = new Snoowrap({
+    userAgent: 'TongHopTinTuc/1.0',
+    clientId: process.env.REDDIT_CLIENT_ID,
+    clientSecret: process.env.REDDIT_CLIENT_SECRET,
+    username: process.env.REDDIT_USERNAME,
+    password: process.env.REDDIT_PASSWORD
+  });
   
-  // Facebook
-  FACEBOOK_PAGE_ID: string;
-  FACEBOOK_PAGE_TOKEN: string;
-  
-  // OpenAI
-  OPENAI_API_KEY: string;
-  
-  // Optional AI Image
-  DALLE_API_KEY?: string;
-  
-  // KV for deduplication (optional - free tier)
-  DEDUP_KV?: KVNamespace;
+  const posts = await r.getSubreddit(subreddit).getHot({ limit });
+  return posts.map(post => ({
+    title: post.title,
+    link: post.url,
+    pubDate: new Date(post.created_utc * 1000).toISOString(),
+    source: `Reddit ${subreddit}`,
+    category: 'reddit',
+    score: post.score,
+    numComments: post.num_comments
+  }));
 }
 ```
 
-## Build Order & Dependencies
+**Required Environment Variables:**
+- `REDDIT_CLIENT_ID` — From https://www.reddit.com/prefs/apps
+- `REDDIT_CLIENT_SECRET` — From app creation
+- `REDDIT_USERNAME` — Reddit account username
+- `REDDIT_PASSWORD` — Reddit account password
 
-### Phase-Based Build Order
+**Package:** `npm install snoowrap` (promise-based, built-in rate limiting)
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│ PHASE 1: Foundation (Week 1)                                  │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                              │
-│  1.1 Setup Cloudflare Worker + Wrangler                        │
-│      → npm create cloudflare@latest tonghoptintuc               │
-│                                                              │
-│  1.2 Add Hono for routing                                      │
-│      → npm i hono                                             │
-│                                                              │
-│  1.3 Test health endpoint                                     │
-│      → GET /health returns { status: "ok" }                   │
-│                                                              │
-│ DEPENDENCIES: None                                            │
-│ BLOCKERS: None                                                │
-└─────────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ PHASE 2: Feed Fetching (Week 1-2)                              │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                              │
-│  2.1 Add fast-xml-parser                                       │
-│      → npm i fast-xml-parser                                    │
-│                                                              │
-│  2.2 Implement fetchFeeds()                                     │
-│      → HTTP GET to RSS URLs                                    │
-│      → Parse XML/Atom to Article[]                            │
-│                                                              │
-│  2.3 Add feed sources to wrangler.toml                        │
-│      FEED_SOURCES = '["hnrss","bbc","reuters"]'                │
-│                                                              │
-│  2.4 Test /test endpoint                                        │
-│      → Returns latest articles from configured feeds          │
-│                                                              │
-│ DEPENDENCIES: Phase 1 complete                                  │
-│ BLOCKERS: Need feed URLs to test                               │
-└─────────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ PHASE 3: Facebook Posting (Week 2)                              │
-├───────────────────────────────────────────────────���─���───────────────┤
-│                                                              │
-│  3.1 Get Facebook Page Access Token                             │
-│      → Facebook Developer → Graph API Explorer                  │
-│      → pages_manage_posts permission                           │
-│                                                              │
-│  3.2 Implement postToFacebook()                               │
-│      → POST /{PAGE_ID}/feed                                    │
-│      → Handle errors (rate limits, auth)                       │
-│                                                              │
-│  3.3 Add secrets to Worker                                     │
-│      → wrangler secret put FACEBOOK_PAGE_ID                    │
-│      → wrangler secret put FACEBOOK_PAGE_TOKEN                 │
-│                                                              │
-│  3.4 Test manual posting                                       │
-│      → POST /run with article                                  │
-│      → Check Facebook Page for new post                        │
-│                                                              │
-│ DEPENDENCIES: Phase 2 complete                                  │
-│ BLOCKERS: Facebook Developer account, Page permissions        │
-└─────────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ PHASE 4: Scheduling (Week 2-3)                                   │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                              │
-│  4.1 Option A: Cloudflare Cron Trigger (free)                   │
-│      → Add to wrangler.toml                                    │
-│      triggers: { crons: ["0 * * * *"] }  // Every hour         │
-│      → Add scheduled() handler                                 │
-│                                                              │
-│  4.2 Option B: cron-job.org (free tier)                        │
-│      → Sign up at cron-job.org                                 │
-│      → Create job: GET https://worker.../run                  │
-│      → Set schedule: Every 1 hour                             │
-│                                                              │
-│  DEPENDENCIES: Phase 3 complete                                │
-│ BLOCKERS: None (both options free)                             │
-└─────────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ PHASE 5: AI Rewriting (Week 3)                                    │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                              │
-│  5.1 Get OpenAI API Key                                         │
-│      → platform.openai.com/api-keys                          │
-│      → fund account ($5 minimum)                              │
-│                                                              │
-│  5.2 Implement rewriteWithAI()                                 │
-│      → Use openai SDK                                         │
-│      → Prompt engineering for Vietnamese social posts         │
-│                                                              │
-│  5.3 Add secret                                                │
-│      → wrangler secret put OPENAI_API_KEY                     │
-│                                                              │
-│  5.4 Test AI rewriting                                          │
-│      → POST /test/ai with article                             │
-│      → Check rewritten output                                 │
-│                                                              │
-│ DEPENDENCIES: Phase 4 complete                                 │
-│ BLOCKERS: OpenAI account + credit                             │
-└─────────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼ Optional
-┌─────────────────────────────────────────────────────────────────────┐
-│ PHASE 6: AI Image Generation (Week 4)                           │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                              │
-│  6.1 Implement generateImage()                                 │
-│      → DALL-E 3 API (~$0.04/image)                            │
-│      → OR free alternative (Bing Image Creator)              │
-│                                                              │
-│  6.2 Update post flow                                          │
-│      → If image available: POST /photos                       │
-│      → Else: POST /feed (text only)                            │
-│                                                              │
-│  6.3 Test image posting                                         │
-│      → Verify image appears on Facebook                       │
-│                                                              │
-│  DEPENDENCIES: Phase 5 complete                                  │
-│ BLOCKERS: Additional cost per image                            │
-└─────────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│ PHASE 7: Production Hardening (Week 4+)                         │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                              │
-│  7.1 Add deduplication                                          │
-│      → Store recent titles in KV (or memory)                  │
-│      → Skip articles with >80% similarity                      │
-│                                                              │
-│  7.2 Add error handling                                        │
-│      → Retry with exponential backoff                         │
-│      → Error logging                                           │
-│                                                              │
-│  7.3 Add monitoring                                            │
-│      → Health checks                                           │
-│      → Error rate tracking                                     │
-│                                                              │
-│ DEPENDENCIES: All phases complete                                │
-│ BLOCKERS: None                                                │
-└─────────────────────────────────────────────────────────────────────┘
+**Confidence:** HIGH — snoowrap is well-documented, actively maintained, handles Reddit API changes.
+
+---
+
+### 2. X/Twitter (API-based, Pay-Per-Use)
+
+**⚠️ CRITICAL:** Free tier effectively discontinued (Feb 2026). Now pay-per-use.
+
+**Options:**
+
+| Option | Cost | Pros | Cons |
+|--------|------|------|------|
+| Official X API (Pay-Per-Use) | $0.005/read | Official, reliable | Costs money (violates $0 budget) |
+| GetXAPI.com | $0.10 free credit | Free to start, no credit card | Third-party, less reliable |
+| Scraping | $0 | Free | Against ToS, unreliable |
+
+**Recommendation:** Skip X/Twitter for now — pay-per-use violates $0/month budget constraint. If needed later, use GetXAPI as stopgap.
+
+**If implementing X API:**
+```javascript
+// Would require new fetcher similar to Reddit pattern
+// Needs: X_API_KEY from developer portal (paid)
 ```
 
-## Cloudflare Workers Specific Patterns
+**Confidence:** HIGH — Multiple sources confirm free tier removal (X Developer Community, Feb 2026).
 
-### Framework: Hono
+---
 
-```typescript
-import { Hono } from 'hono';
+### 3. Reuters (RSS with Auth / Workarounds)
 
-const app = new Hono<{ Bindings: Env }>();
+**Official Access:** Requires authentication (password-protected RSS) or paid subscription.
 
-app.get('/health', (c) => c.json({ status: 'ok' }));
-app.post('/run', async (c) => {
-  await runPipeline(c.env);
-  return c.json({ success: true });
-});
-app.get('/test', async (c) => {
-  const articles = await fetchFeeds(c.env);
-  return c.json({ articles });
-});
+**Workarounds (FREE but less reliable):**
 
-export default app;
+**Option A: Google News RSS Proxy**
+```javascript
+// Add to SOURCES object
+{ name: 'Reuters (Google News)', 
+  url: 'https://news.google.com/rss/search?q=when:24h+allinurl:reuters.com&ceid=US:en&hl=en-US&gl=US' }
 ```
 
-### Cron Trigger Configuration
+**Option B: RapidAPI Reuters API**
+- Requires: RapidAPI key (free tier available)
+- URL: `https:// Reuters-api-rapidapi.com/`
+- Needs: `REUTERS_RAPIDAPI_KEY`
 
-```toml
-# wrangler.toml
-name = "tonghoptintuc"
-main = "src/index.ts"
-compatibility_date = "2026-04-01"
+**Option C: Reuters Wire API (v7/v8)**
+```
+https://wireapi.reuters.com/v7/feed/url/www.reuters.com/theWire
+```
+⚠️ Community reports this returns 502 errors or gets IP-blocked.
 
-[triggers]
-crons = ["0 * * * *"]  # Every hour at minute 0
+**Recommendation:** Use Google News RSS proxy (Option A) — free, no auth, reasonable quality.
+
+**Confidence:** MEDIUM — Official docs say auth required, but community finds workarounds.
+
+---
+
+### 4. Associated Press (AP) — RSS
+
+**✅ FREE — RSS available without authentication**
+
+**RSS Feed URLs:**
+```javascript
+// Add to SOURCES object
+ap: [
+  { name: 'AP Top News', url: 'https://apnews.com/hub/apf-topnews?output=rss' },
+  { name: 'AP US News', url: 'https://apnews.com/hub/apf-topnews?output=rss&p=18' },
+  { name: 'AP World', url: 'https://apnews.com/hub/apf-topnews?output=rss&p=16' }
+]
 ```
 
-### Scheduled Handler
+**Note:** AP uses custom RSS/Atom format. Existing `xml2js` parser should handle it, but test first.
 
-```typescript
-export default {
-  async fetch(request, env) {
-    return app.fetch(request, env);
-  },
-  async scheduled(controller, env, ctx) {
-    // Called every hour
-    console.log('Cron triggered at', new Date().toISOString());
-    await runPipeline(env);
-  },
+**Confidence:** MEDIUM — Some community reports of format issues, but URLs return valid XML in testing.
+
+---
+
+### 5. Bloomberg — RSS
+
+**✅ FREE — Official RSS feeds available without authentication**
+
+**RSS Feed URLs (verified working):**
+```javascript
+// Add to SOURCES object
+bloomberg: [
+  { name: 'Bloomberg Markets', url: 'https://feeds.bloomberg.com/markets/news.rss' },
+  { name: 'Bloomberg Technology', url: 'https://feeds.bloomberg.com/technology/news.rss' },
+  { name: 'Bloomberg Politics', url: 'https://feeds.bloomberg.com/politics/news.rss' },
+  { name: 'Bloomberg Business', url: 'https://feeds.bloomberg.com/business/news.rss' },
+  { name: 'Bloomberg Economics', url: 'https://feeds.bloomberg.com/economics/news.rss' },
+  { name: 'Bloomberg Wealth', url: 'https://feeds.bloomberg.com/wealth/news.rss' }
+]
+```
+
+**Confidence:** HIGH — Multiple sources confirm feeds work, URLs verified in community posts.
+
+---
+
+### 6. Wall Street Journal (WSJ) — RSS with Auth
+
+**Official Access:** Dow Jones Investor Select RSS API requires API key.
+
+**URL Format:** `https://feeds.content.dowjones.io/api/investorselect/wsj`  
+**Auth:** Header `x-api-key: <API_KEY>`  
+**Rate Limit:** 1 request/minute
+
+**Workarounds (FREE):**
+
+**Option A: Google News RSS Proxy**
+```javascript
+{ name: 'WSJ (Google News)', 
+  url: 'https://news.google.com/rss/search?q=when:24h+allinurl:wsj.com&ceid=US:en&hl=en-US&gl=US' }
+```
+
+**Option B: Old DJ RSS (may work without auth)**
+```
+https://feeds.a.dj.com/rss/RSSWorldNews.xml
+https://feeds.a.dj.com/rss/RSSBusiness.xml
+```
+⚠️ Community reports mixed results — some feeds offline since Feb 2026.
+
+**Recommendation:** Use Google News RSS proxy (Option A) — most reliable free approach.
+
+**Confidence:** MEDIUM — Official requires auth, but Google News proxy works.
+
+---
+
+## Recommended Architecture Changes
+
+### Modified SOURCES Object
+
+```javascript
+const SOURCES = {
+  world: [
+    // Existing sources...
+    { name: 'Reuters (GNews)', url: 'https://news.google.com/rss/search?q=when:24h+allinurl:reuters.com&ceid=US:en&hl=en-US&gl=US', type: 'rss' },
+    { name: 'AP Top News', url: 'https://apnews.com/hub/apf-topnews?output=rss', type: 'rss' },
+    { name: 'WSJ (GNews)', url: 'https://news.google.com/rss/search?q=when:24h+allinurl:wsj.com&ceid=US:en&hl=en-US&gl=US', type: 'rss' }
+  ],
+  tech: [
+    // Existing sources...
+    { name: 'Bloomberg Technology', url: 'https://feeds.bloomberg.com/technology/news.rss', type: 'rss' }
+  ],
+  business: [  // NEW CATEGORY
+    { name: 'Bloomberg Markets', url: 'https://feeds.bloomberg.com/markets/news.rss', type: 'rss' },
+    { name: 'Bloomberg Business', url: 'https://feeds.bloomberg.com/business/news.rss', type: 'rss' },
+    { name: 'Bloomberg Economics', url: 'https://feeds.bloomberg.com/economics/news.rss', type: 'rss' }
+  ],
+  reddit: [  // NEW CATEGORY (API-based)
+    { name: 'Reddit WorldNews', subreddit: 'worldnews', type: 'reddit' },
+    { name: 'Reddit Technology', subreddit: 'technology', type: 'reddit' }
+  ]
+  // Note: X/Twitter skipped (pay-per-use violates $0 budget)
 };
 ```
 
-## Error Handling Patterns
+### Updated Scorer (src/feeds/scorer.js)
 
-### Retry Logic
+Add new source names to the bonus scoring:
 
-```typescript
-async function withRetry<T>(
-  fn: () => Promise<T>,
-  maxRetries = 3,
-  delay = 1000
-): Promise<T> {
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      return await fn();
-    } catch (error) {
-      if (i === maxRetries - 1) throw error;
-      await new Promise(r => setTimeout(r, delay * Math.pow(2, i)));
-    }
-  }
-  throw new Error('Max retries exceeded');
+```javascript
+// Line 42, update to:
+if (['BBC', 'Reuters', 'AP', 'Bloomberg', 'Reuters (GNews)', 'AP Top News'].includes(item.source)) {
+  score += 10;
 }
 ```
 
-### Rate Limit Handling
+Also add Reddit-specific scoring (upvotes = popularity):
 
-```typescript
-function isRateLimited(error: any): boolean {
-  return error?.response?.data?.error?.code === 4 ||
-         error?.response?.data?.error?.code === 17;
-}
+```javascript
+// Add after line 41:
+if (item.score && item.score > 1000) score += 15;  // Reddit high-score posts
+if (item.numComments && item.numComments > 500) score += 10;  // Active discussions
 ```
 
-## Scalability Considerations
+---
 
-| Concern | At MVP (1 post/hour) | At 10K posts/day | At 1M posts/day |
-|---------|---------------------|-------------------|------------------|
-| **Worker invocations** | 1/hour | 417/hour | 41,667/hour |
-| **API calls** | ~3/post | 4,200/day | 420,000/day |
-| **Cost** | ~$1-3/month | ~$30/month | ~$500/month |
-| **Bottleneck** | None | OpenAI rate limits | Facebook rate limits |
+## Component Boundary Changes
 
-## Anti-Patterns to Avoid
+| Component | Change Type | Description |
+|-----------|-------------|-------------|
+| `fetch-news.js` | **MODIFY** | Add new source categories, Reddit fetcher function |
+| `src/feeds/scorer.js` | **MODIFY** | Add new source names, Reddit scoring logic |
+| `src/feeds/ranker.js` | **NO CHANGE** | Works generically |
+| `src/services/duplicate.js` | **NO CHANGE** | URL-based, works for all sources |
+| `generate.js` | **NO CHANGE** | Receives standardized news.json |
+| `gen-image.js` | **NO CHANGE** | Works with any topic |
+| `post.js` | **NO CHANGE** | Posts whatever it receives |
 
-### Anti-Pattern 1: Multiple Workers for Simple Pipeline
-**What:** Splitting into Crawler Worker, Rewriter Worker, Publisher Worker
-**Why:** Adds complexity, service bindings overhead, no benefit for MVP
-**Instead:** Single Worker with handler functions
+---
 
-### Anti-Pattern 2: Database for MVP
-**What:** Adding D1 database to track posts
-**Why:** Out of scope per PROJECT.md constraints
-**Instead:** In-memory or KV deduplication (or skip entirely)
+## Data Flow Changes
 
-### Anti-Pattern 3: Real-time WebSocket
-**What:** WebSocket connections for live updates
-**Why:** Not needed - hourly batch posting
-**Instead:** Cron-triggered batch processing
+### RSS Sources (Reuters, AP, Bloomberg, WSJ)
+```
+Same as existing: RSS URL → fetchFeed() → xml2js parse → standardize → score → rank
+```
 
-### Anti-Pattern 4: Complex Content Filtering
-**What:** ML-based content classification, sentiment analysis
-**Why:** Overengineering for single-use case
-**Instead:** Simple rule-based scoring
+### Reddit (API Source)
+```
+New flow: Reddit API → fetchReddit() → transform to standard format → score (with Reddit metrics) → rank
+```
+
+### Skipped: X/Twitter
+```
+Not implemented (pay-per-use violates $0 budget)
+If added later: Similar to Reddit pattern with X API fetcher
+```
+
+---
+
+## Environment Variables Needed
+
+| Variable | Source | Required | Notes |
+|----------|--------|----------|-------|
+| `REDDIT_CLIENT_ID` | Reddit Apps | For Reddit | Create app at reddit.com/prefs/apps |
+| `REDDIT_CLIENT_SECRET` | Reddit Apps | For Reddit | Shown when creating app |
+| `REDDIT_USERNAME` | Reddit account | For Reddit | Your Reddit username |
+| `REDDIT_PASSWORD` | Reddit account | For Reddit | Your Reddit password |
+| `REUTERS_RAPIDAPI_KEY` | RapidAPI | Optional | Only if using RapidAPI method |
+
+---
+
+## Build Order for New Sources
+
+**Phase 1: Easy RSS sources (no auth, free)**
+1. Bloomberg — RSS feeds verified working ✅
+2. AP — RSS feeds available ✅
+3. Add to existing `world` and `tech` categories
+
+**Phase 2: RSS sources with workarounds**
+4. Reuters — Use Google News RSS proxy
+5. WSJ — Use Google News RSS proxy
+
+**Phase 3: API-based source (requires credentials)**
+6. Reddit — Install snoowrap, add env vars, test
+
+**Phase 4: Skip (budget constraints)**
+7. X/Twitter — Pay-per-use violates $0/month constraint
+
+---
+
+## Risks and Mitigations
+
+| Risk | Likelihood | Mitigation |
+|------|------------|------------|
+| Google News RSS proxy gets blocked | Medium | Have RapidAPI as backup for Reuters/WSJ |
+| Reddit API rate limiting | Medium | snoowrap handles this, cache results |
+| AP RSS format changes | Low | Test parsing, have fallback |
+| Bloomberg RSS feeds change URL | Low | Feeds are official, stable |
+| Environment variables missing | High | Add checks in fetch-news.js |
+
+---
 
 ## Sources
 
-- [Cloudflare Workers Cron Triggers](https://developers.cloudflare.com/workers/configuration/cron-triggers/) - HIGH: Official docs
-- [Cloudflare Workers Queues](https://developers.cloudflare.com/queues/) - HIGH: Official docs
-- [Ruri Reader Architecture](https://gist.github.com/azu/de0d0450f34a2db5d55b81680b6a9e2f) - MEDIUM: Reference implementation
-- [Facebook Graph API - Pages](https://developers.facebook.com/docs/pages/) - HIGH: Official docs
-- [Facebook Page Scheduling](https://developers.facebook.com/docs/graph-api/reference/page/scheduled_posts/) - HIGH: Official docs
-- [OpenAI SDK Streaming](https://developers.cloudflare.com/workers/examples/openai-sdk-streaming) - HIGH: Official example
-- [Serverless Facebook Automation](http://dudistan.com/automate/) - MEDIUM: Reference architecture
+- **Reddit API:** snoowrap npm docs, Reddit API Documentation (2026)
+- **X/Twitter API:** X Developer Community posts (Jan-Feb 2026), GetXAPI.com
+- **Reuters:** Thomson Reuters Developer Portal, Reuters Liaison docs, RSS-Bridge GitHub issues
+- **AP News:** AP News RSS URLs tested, RSS.app generator, RSSHub docs
+- **Bloomberg:** feeds.bloomberg.com verified by multiple sources (FeedSpot, IFTTT, IvyReader)
+- **WSJ:** Dow Jones Investor Select API docs, feeds.content.dowjones.io, community reports
+
+---
+
+## Confidence Assessment
+
+| Source | Confidence | Reason |
+|--------|------------|--------|
+| Bloomberg RSS | HIGH | Official feeds, multiple confirmations |
+| Reddit API | HIGH | snoowrap well-documented, standard approach |
+| AP RSS | MEDIUM | URL format confirmed, but custom format |
+| Reuters (workaround) | MEDIUM | Community reports working, not official |
+| WSJ (workaround) | MEDIUM | Google News proxy works, official requires auth |
+| X/Twitter | HIGH | Confirmed pay-per-use (skip) |
+
+---
+
+*Research complete: 2026-04-28*  
+*Confidence: MEDIUM-HIGH — Most sources verified with multiple community reports; official docs limited for paid sources.*
