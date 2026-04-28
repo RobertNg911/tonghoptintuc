@@ -3,33 +3,35 @@
 ```
 Tonghoptintuc/
 ├── .dev.vars              # Environment variables (dev only)
+├── .env.example          # Environment template
 ├── .github/workflows/
-│   └── cron.yml          # GitHub Actions pipeline
-├── package.json           # Dependencies (axios, xml2js, form-data)
-├── tsconfig.json         # TypeScript config (unused)
+│   └── cron.yml          # GitHub Actions pipeline (15-min)
+├── package.json           # Dependencies
 │
-├── fetch-news.js         # Step 1: Fetch RSS feeds
-├── generate.js         # Step 2: AI rewrite content (Groq)
-├── gen-image.js        # Step 3: Generate image (Pollinations)
-├── post.js             # Step 4: Post to Facebook (with retry)
+├── fetch-news.js         # Step 1: Fetch 13 sources
+├── generate.js         # Step 2: AI rewrite (Groq)
+├── gen-image.js        # Step 3: Generate image
+├── post.js             # Step 4: Post to Facebook
 │
-├── news.json           # Raw news items (ranked)
+├── news.json           # Raw news (ranked)
 ├── content-1.txt     # Generated post
 ├── image-1.png       # Generated image (1200x675)
-├── posted-links.json   # Duplicate tracking (24h)
+├── posted-links.json   # Duplicate tracking
 │
 ├── src/
 │   ├── services/
-│   │   ├── image.js     # Image generation (Pollinations)
-│   │   ├── duplicate.js # Duplicate tracking
-│   ├── feeds/
-│   │   ├── scorer.js   # Hot news scoring
-│   │   └── ranker.js  # Rank top 1
+│   │   ├── reddit.js     # Reddit API (User-Agent, rate limit)
+│   │   ├── image.js     # Pollinations AI
+│   │   └── duplicate.js # Duplicate tracking
+│   └── feeds/
+│       ├── scorer.js   # Score + source reliability
+│       └── ranker.js  # Rank Top 1
 │
-└── .planning/          # GSD planning artifacts
-    ├── PROJECT.md     # Project vision
-    ├── ROADMAP.md    # Phase breakdown
-    └── codebase/     # Codebase docs
+└── .planning/          # GSD planning
+    ├── PROJECT.md
+    ├── ROADMAP.md
+    ├── REQUIREMENTS.md
+    └── codebase/     # Documentation
 ```
 
 ---

@@ -1,33 +1,33 @@
 # ARCHITECTURE.md - TongHopTinTuc Architecture
 
-## Overview
-Simple sequential pipeline, no framework, no database.
-
 ## Pipeline
 ```
 ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
 │ fetch-news   │───▶│ generate    │───▶│ gen-image   │───▶│ post.js     │
-│ (RSS fetch)  │    │ (AI rewrite)│    │ (AI image)  │    │ (FB post)   │
+│ (13 sources)│    │ (AI rewrite)│    │ (AI image)  │    │ (FB post)   │
 └──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘
        │                   │                   │                   │
     news.json         content-1.txt         image-1.png           FB API
 ```
 
-## State Files
-- `news.json` - Raw RSS items (ranked by hot score)
-- `content-1.txt` - AI rewritten post (index = schedule)
-- `image-1.png` - Generated image (1200x675)
-- `posted-links.json` - Duplicate prevention (24h retention)
+## News Sources (13 total)
+- **RSS (7):** BBC, CNN, Al Jazeera, NYTimes, Guardian, France24, Washington Post
+- **Reddit (3):** r/worldnews, r/technology, r/news
+- **New RSS (4):** Bloomberg Markets, Bloomberg Tech, Reuters, WSJ
 
 ## Services
-- `src/services/image.js` - Image generation (Pollinations)
+- `src/services/reddit.js` - Reddit API (JSON, rate limiting)
+- `src/services/image.js` - Pollinations AI
 - `src/services/duplicate.js` - Duplicate tracking
-- `src/feeds/scorer.js` - Hot news scoring
-- `src/feeds/ranker.js` - Rank and select top 1
+- `src/feeds/scorer.js` - Score với source reliability (4 tiers)
+- `src/feeds/ranker.js` - Rank Top 1
 
-## Retry Logic
-- Image upload: 2 retries with 2s delay
-- Pipeline fails if no image generated
+## Source Reliability Scoring (4 Tiers)
+| Tier | Sources | Points |
+|------|---------|-------|
+| Tier 1 | Reuters, AP, Bloomberg | +15 |
+| Tier 2 | BBC, NYTimes, Guardian, WSJ | +10 |
+| Tier 3 | CNN, Al Jazeera, Reddit | +5 |
 
 ---
 
