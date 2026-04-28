@@ -5,6 +5,7 @@ const { parseString } = require('xml2js');
 const { scoreAll } = require('./src/feeds/scorer');
 const { rankNews, getTopNews } = require('./src/feeds/ranker');
 const { checkDuplicate } = require('./src/services/duplicate');
+const { fetchRedditPosts } = require('./src/services/reddit');
 
 const SOURCES = {
   world: [
@@ -29,6 +30,11 @@ const SOURCES = {
     { name: 'The Next Web', url: 'https://thenextweb.com/feed/' },
     { name: 'ZDNet', url: 'https://www.zdnet.com/news/rss.xml' },
     { name: 'Digital Trends', url: 'https://www.digitaltrends.com/feed/' }
+  ],
+  reddit: [
+    { name: 'Reddit r/worldnews', subreddit: 'worldnews' },
+    { name: 'Reddit r/technology', subreddit: 'technology' },
+    { name: 'Reddit r/news', subreddit: 'news' }
   ]
 };
 
@@ -47,38 +53,58 @@ function fetchFeed(url) {
 }
 
 async function fetchAll() {
-  const sources = SOURCES[CATEGORY] || SOURCES.world;
+  const category = CATEGORY;
   const items = [];
   let successCount = 0;
   
-  for (const source of sources) {
-    try {
-      console.log(`Fetching ${source.name}...`);
-      const xml = await fetchFeed(source.url);
-      const feed = await new Promise((resolve, reject) => 
-        parseString(xml, (err, result) => err ? reject(err) : resolve(result))
-      );
-      const channel = feed.rss?.channel?.[0];
-      const entries = channel?.item || [];
-      
-      for (const item of entries.slice(0, 5)) {
-        items.push({
-          title: item.title?.[0] || '',
-          link: item.link?.[0] || '',
-          pubDate: item.pubDate?.[0] || '',
-          source: source.name,
-          category: CATEGORY
-        });
+  // Fetch RSS sources (world or tech)
+  if (category === 'world' || category === 'tech') {
+    const rssSources = SOURCES[category] || [];
+    for (const source of rssSources) {
+      try {
+        console.log(`Fetching ${source.name}...`);
+        const xml = await fetchFeed(source.url);
+        const feed = await new Promise((resolve, reject) => 
+          parseString(xml, (err, result) => err ? reject(err) : resolve(result))
+        );
+        const channel = feed.rss?.channel?.[0];
+        const entries = channel?.item || [];
+        
+        for (const item of entries.slice(0, 5)) {
+          items.push({
+            title: item.title?.[0] || '',
+            link: item.link?.[0] || '',
+            pubDate: item.pubDate?.[0] || '',
+            source: source.name,
+            category: category
+          });
+        }
+        successCount++;
+        console.log(`✅ ${source.name}: ${entries.length} items`);
+      } catch (e) {
+        console.error(`❌ ${source.name} failed: ${e.message}`);
       }
-      successCount++;
-      console.log(`✅ ${source.name}: ${entries.length} items`);
-    } catch (e) {
-      console.error(`❌ ${source.name} failed: ${e.message}`);
     }
   }
 
+  // Fetch Reddit sources (always fetch Reddit for world category or if category is reddit)
+  if (category === 'world' || category === 'reddit') {
+    const redditSources = SOURCES.reddit || [];
+    const subreddits = redditSources.map(s => s.subreddit);
+
+    try {
+      console.log(`Fetching Reddit: r/${subreddits.join(', r/')}...`);
+      const redditPosts = await fetchRedditPosts(subreddits, { limit: 10 });
+      items.push(...redditPosts);
+      successCount++;
+      console.log(`✅ Reddit: ${redditPosts.length} posts`);
+    } catch (e) {
+      console.error(`❌ Reddit failed: ${e.message}`);
+    }
+  }
+  
   if (items.length === 0) {
-    console.error(`❌ No items fetched for ${CATEGORY}`);
+    console.error(`❌ No items fetched for ${category}`);
     process.exit(1);
   }
 
