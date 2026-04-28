@@ -20,10 +20,10 @@
 | ID | Name | Description | Phase |
 |----|------|-------------|-------|
 | **Reddit Integration** | | | **08** |
-| REDDIT-01 | FetchRedditAPI | Fetch tin từ Reddit API | 08 |
-| REDDIT-02 | ParseRedditPost | Parse Reddit post structure | 08 |
-| REDDIT-03 | UserAgentHeader | Add User-Agent header | 08 |
-| REDDIT-04 | RateLimiting | Handle 60 req/min | 08 |
+| REDDIT-01 | FetchRedditAPI | Fetch tin từ Reddit API | 08 ✅ |
+| REDDIT-02 | ParseRedditPost | Parse Reddit post structure | 08 ✅ |
+| REDDIT-03 | UserAgentHeader | Add User-Agent header | 08 ✅ |
+| REDDIT-04 | RateLimiting | Handle 60 req/min | 08 ✅ |
 | **RSS Sources** | | | **09** |
 | RSS-02a | BloombergRSS | Add Bloomberg RSS source | 09 |
 | RSS-02b | RSSParser | Use rss-parser library | 09 |
@@ -78,7 +78,7 @@
 | 05-ai-processing | ✅ Complete | Groq + Pollinations |
 | 06-content-prompt | ✅ Complete | Improved prompt: System + User, temp 0.85, 300-500 words |
 | 07-facebook-engagement | 📋 Pending | Strategies to increase Facebook engagement |
-| 08-reddit-integration | 📋 Pending | Reddit API integration (REDDIT-01 to 04) |
+| 08-reddit-integration | ✅ Complete | Reddit API integration (REDDIT-01 to 04) |
 | 09-rss-sources | 📋 Pending | Bloomberg + Google RSS proxy (RSS-02, RSS-03) |
 | 10-scoring-ranking | 📋 Pending | Update scoring for new sources (CORE-01) |
 
@@ -136,8 +136,8 @@
 **Plans:** 2 plans
 
 **Plan list:**
-- [ ] 08-01-PLAN.md — Create Reddit fetch service with User-Agent and rate limiting
-- [ ] 08-02-PLAN.md — Integrate Reddit into fetch-news.js pipeline
+- [x] 08-01-PLAN.md — Create Reddit fetch service with User-Agent and rate limiting
+- [x] 08-02-PLAN.md — Integrate Reddit into fetch-news.js pipeline
 
 **Success Criteria:**
 1. Reddit posts được fetch thành công qua Reddit JSON API (https://www.reddit.com/r/{subreddit}/hot.json)

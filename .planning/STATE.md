@@ -11,10 +11,10 @@
 
 | Field | Value |
 |-------|-------|
-| **Milestone** | v1.1 (Planning) |
-| **Phase** | 08-reddit-integration |
-| **Status** | 🟡 Planning |
-| **Progress Bar** | ████░░░░░░░░░░ 20% |
+| **Milestone** | v1.1 (In Progress) |
+| **Phase** | 09-rss-sources |
+| **Status** | 🟢 Ready |
+| **Progress Bar** | ██████░░░░░░░░ 30% |
 
 ---
 
@@ -22,7 +22,7 @@
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 08 | Reddit Integration | REDDIT-01 to 04 | 📋 Pending |
+| 08 | Reddit Integration | REDDIT-01 to 04 | ✅ Complete |
 | 09 | RSS Sources (Bloomberg + Google Proxy) | RSS-02a/b/c, RSS-03a/b/c | 📋 Pending |
 | 10 | Scoring/Ranking Updates | CORE-01a/b/c | 📋 Pending |
 
@@ -57,21 +57,23 @@
 
 ---
 
-## Features Planned (v1.1)
+## Features Implemented (v1.1 - In Progress)
 
-### Phase 08: Reddit Integration
-- 📋 Fetch Reddit hot posts via JSON API (REDDIT-01)
-- 📋 Parse Reddit post structure (title, url, score, comments) (REDDIT-02)
-- 📋 Add User-Agent header (Reddit API requirement) (REDDIT-03)
-- 📋 Handle rate limiting (60 req/min) (REDDIT-04)
+### Phase 08: Reddit Integration (✅ Complete)
+- ✅ Fetch Reddit hot posts via JSON API (REDDIT-01)
+- ✅ Parse Reddit post structure (title, url, score, comments) (REDDIT-02)
+- ✅ Add User-Agent header (Reddit API requirement) (REDDIT-03)
+- ✅ Handle rate limiting (60 req/min) (REDDIT-04)
+- ✅ Integrate Reddit into fetch-news.js pipeline
+- ✅ Update scorer.js to handle Reddit posts (upvotes, comments)
 
-### Phase 09: New RSS Sources
+### Phase 09: New RSS Sources (📋 Pending)
 - 📋 Bloomberg RSS via rss-parser (RSS-02a/b/c)
 - 📋 Google RSS proxy for Reuters (RSS-03a)
 - 📋 Google RSS proxy for AP News (RSS-03b)
 - 📋 Google RSS proxy for WSJ (RSS-03c)
 
-### Phase 10: Scoring Updates
+### Phase 10: Scoring Updates (📋 Pending)
 - 📋 Incorporate Reddit upvotes into scoring (CORE-01a)
 - 📋 Add source reliability weights (CORE-01b)
 - 📋 Update ranking algorithm for mixed sources (CORE-01c)
@@ -87,26 +89,28 @@
 | `FB_TOKEN` | ✅ Set | Required |
 | `TELEGRAM_BOT_TOKEN` | ⚠️ Check | Optional |
 | `TELEGRAM_CHAT_ID` | ⚠️ Check | Optional |
-| `REDDIT_USER_AGENT` | ❌ New | Required for Phase 08 |
+| `REDDIT_USER_AGENT` | ✅ Set | Required for Phase 08 (Complete) |
 
 ---
 
 ## Files Structure
 
 ```
-├── fetch-news.js      # RSS fetcher (will be updated in v1.1)
+├── fetch-news.js      # RSS + Reddit fetcher (updated in Phase 08)
 ├── generate.js       # AI content (with retry)
 ├── gen-image.js      # AI image (with retry)
 ├── post.js           # Facebook (with markPosted + alerts)
 ├── src/
 │   ├── feeds/
 │   │   ├── ranker.js # Top 1 selection (will update in Phase 10)
-│   │   └── scorer.js # News scoring (will update in Phase 10)
+│   │   └── scorer.js # News scoring (updated in Phase 08 for Reddit)
 │   └── services/
 │       ├── duplicate.js # Duplicate prevention (24h)
-│       └── image.js    # Pollinations AI
+│       ├── image.js    # Pollinations AI
+│       └── reddit.js   # Reddit API fetch service (NEW in Phase 08)
 ├── posted-links.json  # Duplicate tracking (auto-generated)
 ├── package.json       # (will add rss-parser in Phase 09)
+├── .env.example       # Environment variables (updated in Phase 08)
 ├── docs/
 │   ├── index.html    # Dashboard
 │   └── history.json
@@ -119,7 +123,7 @@
 
 ## Todo
 
-- [ ] **Phase 08:** Plan Reddit integration (run `/gsd-plan-phase 08`)
+- [x] **Phase 08:** Reddit integration (✅ Complete)
 - [ ] **Phase 09:** Plan RSS sources (run `/gsd-plan-phase 09`)
 - [ ] **Phase 10:** Plan scoring updates (run `/gsd-plan-phase 10`)
 - [ ] Clean up unused services (src/services/*.js)
