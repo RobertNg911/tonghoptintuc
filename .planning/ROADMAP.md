@@ -79,8 +79,8 @@
 | 06-content-prompt | ✅ Complete | Improved prompt: System + User, temp 0.85, 300-500 words |
 | 07-facebook-engagement | 📋 Pending | Strategies to increase Facebook engagement |
 | 08-reddit-integration | ✅ Complete | Reddit API integration (REDDIT-01 to 04) |
-| 09-rss-sources | 📋 Pending | Bloomberg + Google RSS proxy (RSS-02, RSS-03) |
-| 10-scoring-ranking | 📋 Pending | Update scoring for new sources (CORE-01) |
+| 09-rss-sources | ✅ Complete | Bloomberg + Google RSS proxy (RSS-02, RSS-03) |
+| 10-scoring-ranking | ✅ Complete | Update scoring for new sources (CORE-01) |
 
 ---
 

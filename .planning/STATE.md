@@ -12,9 +12,9 @@
 | Field | Value |
 |-------|-------|
 | **Milestone** | v1.1 (In Progress) |
-| **Phase** | 09-rss-sources |
-| **Status** | 🟢 Ready |
-| **Progress Bar** | ██████░░░░░░░░ 30% |
+| **Phase** | 10-scoring-ranking |
+| **Status** | ✅ Phases 09+10 Complete |
+| **Progress Bar** | ████████████████ 100% |
 
 ---
 
@@ -23,8 +23,21 @@
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
 | 08 | Reddit Integration | REDDIT-01 to 04 | ✅ Complete |
-| 09 | RSS Sources (Bloomberg + Google Proxy) | RSS-02a/b/c, RSS-03a/b/c | 📋 Pending |
-| 10 | Scoring/Ranking Updates | CORE-01a/b/c | 📋 Pending |
+| 09 | RSS Sources (Bloomberg + Google Proxy) | RSS-02a/b/c, RSS-03a/b/c | ✅ Complete |
+| 10 | Scoring/Ranking Updates | CORE-01a/b/c | ✅ Complete |
+
+---
+## Decisions Made
+
+### Phase 09 Decisions:
+- Use rss-parser for new RSS sources (cleaner API than xml2js)
+- Use Google RSS proxy for sites without native RSS (Reuters, AP News, WSJ)
+- Organize new sources under `financial` category in SOURCES object
+
+### Phase 10 Decisions:
+- Implement 4-tier source reliability system (Tier1: +15, Tier2: +10, Tier3: +5, Tier4: 0)
+- Replace hardcoded BBC/Reuters check with dynamic SOURCE_RELIABILITY lookup
+- Keep Reddit-specific scoring (upvotes, comments) alongside source reliability
 
 ---
 
@@ -67,16 +80,16 @@
 - ✅ Integrate Reddit into fetch-news.js pipeline
 - ✅ Update scorer.js to handle Reddit posts (upvotes, comments)
 
-### Phase 09: New RSS Sources (📋 Pending)
-- 📋 Bloomberg RSS via rss-parser (RSS-02a/b/c)
-- 📋 Google RSS proxy for Reuters (RSS-03a)
-- 📋 Google RSS proxy for AP News (RSS-03b)
-- 📋 Google RSS proxy for WSJ (RSS-03c)
+### Phase 09: New RSS Sources (✅ Complete)
+- ✅ Bloomberg RSS via rss-parser (RSS-02a/b/c)
+- ✅ Google RSS proxy for Reuters (RSS-03a)
+- ✅ Google RSS proxy for AP News (RSS-03b)
+- ✅ Google RSS proxy for WSJ (RSS-03c)
 
-### Phase 10: Scoring Updates (📋 Pending)
-- 📋 Incorporate Reddit upvotes into scoring (CORE-01a)
-- 📋 Add source reliability weights (CORE-01b)
-- 📋 Update ranking algorithm for mixed sources (CORE-01c)
+### Phase 10: Scoring/Ranking Updates (✅ Complete)
+- ✅ Incorporate Reddit upvotes into scoring (CORE-01a)
+- ✅ Add source reliability weights (CORE-01b)
+- ✅ Update ranking algorithm for mixed sources (CORE-01c)
 
 ---
 
@@ -124,11 +137,19 @@
 ## Todo
 
 - [x] **Phase 08:** Reddit integration (✅ Complete)
-- [ ] **Phase 09:** Plan RSS sources (run `/gsd-plan-phase 09`)
-- [ ] **Phase 10:** Plan scoring updates (run `/gsd-plan-phase 10`)
+- [x] **Phase 09:** RSS sources (✅ Complete)
+- [x] **Phase 10:** Scoring updates (✅ Complete)
 - [ ] Clean up unused services (src/services/*.js)
 - [ ] Clean up unused feeds (src/feeds/*.js)
 - [ ] Test image with new GitHub token
+
+---
+## Session Info
+
+- **Last session:** 2026-04-28
+- **Stopped At:** Completed Phase 09 (RSS Sources) and Phase 10 (Scoring/Ranking)
+- **Next phase:** Phase 07 (Facebook Engagement - pending)
+- **Milestone v1.1 status:** 3/3 phases complete (100%)
 
 ---
 

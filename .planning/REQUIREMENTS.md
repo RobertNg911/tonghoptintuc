@@ -9,25 +9,25 @@
 ### v1.1 Requirements
 
 ### [REDDIT-01] Reddit API Integration
-- [ ] **REDDIT-01**: Fetch tin từ Reddit API (r/worldnews, r/technology, r/news)
-- [ ] **REDDIT-02**: Parse Reddit post structure (title, url, score, comments)
-- [ ] **REDDIT-03**: Add User-Agent header cho Reddit requests
-- [ ] **REDDIT-04**: Handle rate limiting (60 req/min)
+- [x] **REDDIT-01**: Fetch tin từ Reddit API (r/worldnews, r/technology, r/news)
+- [x] **REDDIT-02**: Parse Reddit post structure (title, url, score, comments)
+- [x] **REDDIT-03**: Add User-Agent header cho Reddit requests
+- [x] **REDDIT-04**: Handle rate limiting (60 req/min)
 
 ### [RSS-02] Bloomberg RSS Integration
-- [ ] **RSS-02a**: Fetch Bloomberg Markets RSS (`feeds.bloomberg.com/markets/news.rss`)
-- [ ] **RSS-02b**: Fetch Bloomberg Technology RSS (`feeds.bloomberg.com/technology/news.rss`)
-- [ ] **RSS-02c**: Parse RSS với rss-parser
+- [x] **RSS-02a**: Fetch Bloomberg Markets RSS (`feeds.bloomberg.com/markets/news.rss`)
+- [x] **RSS-02b**: Fetch Bloomberg Technology RSS (`feeds.bloomberg.com/technology/news.rss`)
+- [x] **RSS-02c**: Parse RSS với rss-parser
 
 ### [RSS-03] Google RSS Proxy Integration
-- [ ] **RSS-03a**: Fetch Reuters qua Google News RSS (`news.google.com/rss/search?q=site:reuters.com`)
-- [ ] **RSS-03b**: Fetch AP News RSS (`apnews.com/hub/apf-topnews?output=rss`)
-- [ ] **RSS-03c**: Fetch WSJ qua Google News RSS (`news.google.com/rss/search?q=site:wsj.com`)
+- [x] **RSS-03a**: Fetch Reuters qua Google News RSS (`news.google.com/rss/search?q=site:reuters.com`)
+- [x] **RSS-03b**: Fetch AP News RSS (`apnews.com/hub/apf-topnews?output=rss`)
+- [x] **RSS-03c**: Fetch WSJ qua Google News RSS (`news.google.com/rss/search?q=site:wsj.com`)
 
 ### [CORE-01] Scoring Updates
-- [ ] **CORE-01a**: Update scorer cho Reddit data structure (score, comments)
-- [ ] **CORE-01b**: Thêm source priority cho Reddit/Bloomberg/Reuters/AP/WSJ
-- [ ] **CORE-01c**: Cross-source hotScore calculation
+- [x] **CORE-01a**: Update scorer cho Reddit data structure (score, comments)
+- [x] **CORE-01b**: Thêm source priority cho Reddit/Bloomberg/Reuters/AP/WSJ
+- [x] **CORE-01c**: Cross-source hotScore calculation
 
 ---
 
@@ -54,19 +54,19 @@
 
 | REQ-ID | Phase | Status |
 |-------|-------|--------|
-| REDDIT-01 | 08 | ⬜ |
-| REDDIT-02 | 08 | ⬜ |
-| REDDIT-03 | 08 | ⬜ |
-| REDDIT-04 | 08 | ⬜ |
-| RSS-02a | 08 | ⬜ |
-| RSS-02b | 08 | ⬜ |
-| RSS-02c | 08 | ⬜ |
-| RSS-03a | 08 | ⬜ |
-| RSS-03b | 08 | ⬜ |
-| RSS-03c | 08 | ⬜ |
-| CORE-01a | 08 | ⬜ |
-| CORE-01b | 08 | ⬜ |
-| CORE-01c | 08 | ⬜ |
+| REDDIT-01 | 08 | ✅ |
+| REDDIT-02 | 08 | ✅ |
+| REDDIT-03 | 08 | ✅ |
+| REDDIT-04 | 08 | ✅ |
+| RSS-02a | 09 | ✅ |
+| RSS-02b | 09 | ✅ |
+| RSS-02c | 09 | ✅ |
+| RSS-03a | 09 | ✅ |
+| RSS-03b | 09 | ✅ |
+| RSS-03c | 09 | ✅ |
+| CORE-01a | 10 | ✅ |
+| CORE-01b | 10 | ✅ |
+| CORE-01c | 10 | ✅ |
 
 ---
 
