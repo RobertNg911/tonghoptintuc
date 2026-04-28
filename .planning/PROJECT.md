@@ -12,16 +12,20 @@ Tự động tổng hợp tin hot từ nhiều nguồn, viết lại bằng AI v
 
 ### Validated
 
-(None yet — ship to validate)
+- [X] Hệ thống thu thập tin từ nhiều nguồn RSS/API
+- [X] AI viết lại bài ngắn từ tin gốc
+- [X] AI tạo hình ảnh minh họa cho bài viết
+- [X] Tự động đăng lên Facebook Fanpage
+- [X] Chạy theo lịch mỗi giờ một lần
+- [X] Deploy miễn phí (GitHub Actions)
 
-### Active
+### Active (v1.1)
 
-- [ ] Hệ thống thu thập tin từ nhiều nguồn RSS/API
-- [ ] AI viết lại bài ngắn từ tin gốc
-- [ ] AI tạo hình ảnh minh họa cho bài viết
-- [ ] Tự động đăng lên Facebook Fanpage
-- [ ] Chạy theo lịch mỗi giờ một lần
-- [ ] Deploy miễn phí (Cloudflare Workers)
+- [ ] Thu thập tin từ Reddit (API)
+- [ ] Thu thập tin từ X/Twitter (API)
+- [ ] Thu thập tin từ Reuters, AP, Bloomberg, WSJ
+- [ ] Cập nhật scorer/ranker cho nhiều nguồn
+- [ ] Deduplicate cross-sources
 
 ### Out of Scope
 
@@ -56,4 +60,17 @@ Tự động tổng hợp tin hot từ nhiều nguồn, viết lại bằng AI v
 
 ---
 
-*Last updated: 2026-04-12 after initialization*
+## Current Milestone: v1.1 Thêm nguồn tin
+
+**Goal:** Mở rộng nguồn tin tức từ Reddit, X/Twitter, và các hãng tin quốc tế (Reuters, AP, Bloomberg, WSJ)
+
+**Target features:**
+- Thu thập tin từ Reddit (r/worldnews, r/technology, r/news)
+- Thu thập tin từ X/Twitter (live feeds)
+- Thu thập tin từ Reuters, AP, Bloomberg, WSJ
+- Cập nhật scorer/ranker cho nhiều nguồn
+- Deduplicate cross-sources
+
+---
+
+*Last updated: 2026-04-28*

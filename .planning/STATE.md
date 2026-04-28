@@ -1,8 +1,8 @@
 # TongHopTinTuc - Project State
 
-## ⚠️ Updated: 2026-04-22
+## ⚠️ Updated: 2026-04-28
 
-> **Project Change**: Cloudflare Workers → GitHub Actions + Node.js scripts
+> **Milestone Change**: v1.1 - Thêm nguồn tin (Reddit, X/Twitter, Reuters, AP, Bloomberg, WSJ)
 
 ---
 
@@ -10,9 +10,10 @@
 
 | Field | Value |
 |-------|-------|
-| **Phase** | Production (All phases complete) |
-| **Status** | 🟢 Operating |
-| **Progress Bar** | ████████████████ 100% |
+| **Milestone** | v1.1 (New) |
+| **Phase** | Defining requirements |
+| **Status** | 🟡 Planning |
+| **Progress Bar** | ████░░░░░░░░░░ 20% |
 
 ---
 
