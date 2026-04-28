@@ -62,8 +62,14 @@ jobs:
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           IMAGE_COUNT: 1
-        run: node gen-image.js
-      
+        run: |
+          node gen-image.js
+          if [ ! -f "image-1.png" ]; then
+            echo "❌ No image generated - image-1.png missing"
+            exit 1
+          fi
+          echo "✅ Image generated: $(ls -la image-1.png)"
+       
       - name: Post to Facebook
         env:
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}

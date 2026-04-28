@@ -3,7 +3,7 @@ const axios = require('axios');
 const { generateImage } = require('./src/services/image');
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const COUNT = parseInt(process.env.IMAGE_COUNT) || 5;
+const COUNT = parseInt(process.env.IMAGE_COUNT) || 1;
 const MAX_RETRIES = 1;
 
 async function generateWithRetry(prompt, attempt = 0) {
@@ -20,10 +20,18 @@ async function generateWithRetry(prompt, attempt = 0) {
 }
 
 async function genImagePrompt(content) {
-  const prompt = `From the Facebook post below, create a short prompt (max 50 words) describing a visual image for illustration.
-- Use English only
-- Describe the visual directly, no text, no famous people
-- Make it simple for AI image generation
+  const prompt = `Analyze the viral Facebook post below and create a VISUAL PROMPT for a striking, scroll-stopping cover image.
+
+REQUIREMENTS:
+- Use English only, simple words
+- Visual style: Bold, eye-catching, meme-style illustration
+- NO text, NO famous people faces
+- NO logos or watermarks
+- Modern social media aesthetic
+- High contrast, vibrant colors
+- If topic is serious → use dramatic/stormy mood
+- If topic is fun → use bright, playful mood
+- Add style keywords: "3D render", "bold typography", "trending on social media"
 
 Content:
 ${content}

@@ -96,38 +96,44 @@ async function post() {
 
   let imageId = null;
   let imageUploadFailed = false;
+  const MAX_IMAGE_RETRIES = 2;
   
   if (fs.existsSync(IMAGE_FILE)) {
     const imageStats = fs.statSync(IMAGE_FILE);
     console.log(`📸 Image file exists: ${IMAGE_FILE} (${imageStats.size} bytes)`);
-    try {
-      // Upload ảnh kèm caption trực tiếp - tạo 1 bài với ảnh + text
-      console.log('📤 Posting with image...');
-      const form = new FormData();
-      form.append('caption', content);
-      form.append('access_token', FB_TOKEN);
-      form.append('source', fs.createReadStream(IMAGE_FILE), {
-        filename: path.basename(IMAGE_FILE),
-        contentType: 'image/png'
-      });
-      
-      const response = await axios.post(
-        `https://graph.facebook.com/v18.0/${FB_PAGE_ID}/photos`,
-        form,
-        { headers: form.getHeaders(), maxContentLength: Infinity, maxBodyLength: Infinity }
-      );
-      imageId = response.data.id;
-      console.log('✅ Done! Post with image. ID:', imageId);
-      
-      // Mark as posted to prevent duplicate
-      const newsData = JSON.parse(fs.readFileSync('news.json', 'utf8'));
-      if (newsData[0]) {
-        markPosted(newsData[0].link, newsData[0].title);
+    
+    for (let attempt = 1; attempt <= MAX_IMAGE_RETRIES; attempt++) {
+      try {
+        console.log(`📤 Posting with image... (attempt ${attempt}/${MAX_IMAGE_RETRIES})`);
+        const form = new FormData();
+        form.append('caption', content);
+        form.append('access_token', FB_TOKEN);
+        form.append('source', fs.createReadStream(IMAGE_FILE), {
+          filename: path.basename(IMAGE_FILE),
+          contentType: 'image/png'
+        });
+        
+        const response = await axios.post(
+          `https://graph.facebook.com/v18.0/${FB_PAGE_ID}/photos`,
+          form,
+          { headers: form.getHeaders(), maxContentLength: Infinity, maxBodyLength: Infinity }
+        );
+        imageId = response.data.id;
+        console.log('✅ Done! Post with image. ID:', imageId);
+        
+        const newsData = JSON.parse(fs.readFileSync('news.json', 'utf8'));
+        if (newsData[0]) {
+          markPosted(newsData[0].link, newsData[0].title);
+        }
+        process.exit(0);
+      } catch (e) {
+        console.log(`⚠️ Image upload failed (attempt ${attempt}):`, e.message);
+        if (attempt < MAX_IMAGE_RETRIES) {
+          await new Promise(r => setTimeout(r, 2000));
+        } else {
+          imageUploadFailed = true;
+        }
       }
-      process.exit(0);
-    } catch (e) {
-      console.log('⚠️ Image upload failed:', e.message);
-      imageUploadFailed = true;
     }
   }
   

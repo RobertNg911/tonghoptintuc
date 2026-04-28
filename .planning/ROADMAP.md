@@ -49,6 +49,17 @@
 | 04-scheduling | ✅ Complete | 15-min cron, Top 1, duplicate prevention |
 | 05-ai-processing | ✅ Complete | Groq + Pollinations |
 | 06-content-prompt | ✅ Complete | Improved prompt: System + User, temp 0.85, 300-500 words |
+| 07-facebook-engagement | 📋 Pending | Strategies to increase Facebook engagement |
+
+---
+
+## Phase 07: Facebook Engagement Optimization
+
+**Goal:** Nghiên cứu và implement các chiến lược tăng lượt view/interaction trên Facebook.
+
+**Depends on:** 06-content-prompt
+
+**Plans:** Not planned yet
 
 ---
 
